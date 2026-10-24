@@ -82,3 +82,11 @@ Walking contexts and feed caches are per warm function instance. A different ins
 ## Map appearance
 
 `public/map-theme.js` contains the editable Google map palette and embedded style rules: lagoon water, ivory land, quiet roads, no commercial POI or transit clutter. Street and locality names remain available. Route/vehicle overlays and required Google attribution remain visible. No Cloud map ID is needed. The header badge, About dialog, destination shortcuts and introductory welcome block have been removed from the UI.
+
+### Local Vercel commands
+
+- `npm run dev:vercel`: Vercel development server on port 4173; stop the existing local Node server first to free that port.
+- `npm run deploy:status`: check production deployment status.
+- `npm run deploy`: manual production deployment when needed.
+
+This folder is linked to the Vercel `hingaa` project via ignored `.vercel/` metadata. CLI version 65.2.0 is pinned in these commands. Pushes to GitHub `main` deploy automatically; check that deployment instead of creating a duplicate. Production Maps credentials are configured in Vercel. Local Maps development reads the ignored `.env.local`.

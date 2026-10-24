@@ -3,6 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "scripts": { "prepare-data": "node scripts/prepare.mjs", "start": "node server.mjs", "test": "node --test test/*.test.mjs" },
-  "engines": { "node": ">=22" }
+  "scripts": {
+    "prepare-data": "node scripts/prepare.mjs",
+    "start": "node server.mjs",
+    "test": "node --test test/*.test.mjs",
+    "dev:vercel": "npx --yes vercel@65.2.0 dev --listen 4173",
+    "deploy": "npx --yes vercel@65.2.0 deploy --prod",
+    "deploy:status": "npx --yes vercel@65.2.0 ls hingaa --environment production"
+  },
+  "engines": {
+    "node": ">=22"
+  }
 }
