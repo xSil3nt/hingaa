@@ -98,3 +98,7 @@ Connected journeys always expose a finite travel duration. If a required departu
 Google walk selection retains the five closest stops and adds stops serving otherwise missing route patterns, up to ten at each end. Walking remains limited to 850 m. The walking phase has a shared 25-second deadline, transfer walks a shared 10-second deadline, with upstream calls at most four at a time. Failed routing falls back to the local path graph when usable.
 
 Successful searches put the endpoints in the page URL. Share copies that link; opening it restores the endpoints and finds current journeys. These URLs contain the selected coordinates, so share location links intentionally. Search results scroll into view on phones, respect reduced motion, and omit zero-minute walk segments from the summary.
+
+## Simpler journey instructions
+
+The product name is `hingaa`. The main journey view focuses on bus numbers, boarding stops, highlighted be-at-stop times, and highlighted get-off stops. Stop lists, timing provenance and vehicle metadata are under expandable details; live updates are collapsed initially. Zero-distance walk steps, duplicate connection notes and the Leave now labels are removed. Waiting uncertainty remains visible in amber when departure data is unavailable.
