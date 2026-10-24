@@ -16,10 +16,10 @@ Step-by-step instructions to get users to their destinations, while accomodating
 
 # Data Sources
 
-AVAS dataset
-RTL Bus Routes
-Google Maps API
-MTCC RTL API
+- AVAS dataset
+- RTL Bus Routes
+- Google Maps API
+- MTCC RTL API
 
 
 # TODO
