@@ -110,7 +110,7 @@ $('search-form').onsubmit=async e=>{
     if(innerWidth<761)window.scrollTo({top:0,behavior:'auto'});
     refreshTimer=setInterval(()=>{if(!document.hidden)refreshFeeds();},30000);
   }catch(error){if(generation===searchGeneration)$('results').innerHTML=`<div class="welcome"><h2>Couldn’t load journeys</h2><p>${escape(error.message)}. Please try again.</p></div>`;}
-  finally{loading=false;$('search-button').disabled=false;$('search-button').innerHTML='Find journeys <span aria-hidden="true">→</span>';}
+  finally{loading=false;$('search-button').disabled=false;$('search-button').innerHTML='Hingaa <span aria-hidden="true">→</span>';}
 };
 function routeChain(j){
   let bus=0;
