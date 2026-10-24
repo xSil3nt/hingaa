@@ -5,8 +5,8 @@ self.addEventListener('notificationclick',event=>{
   event.notification.close();
   event.waitUntil((async()=>{
     const tabs=await self.clients.matchAll({type:'window',includeUncontrolled:true});
-    const path=event.notification.data?.path==='/new/journey'?'/new/journey':'/journey.html';
-    const tab=tabs.find(c=>new URL(c.url).pathname===path);
+    const path='/journey.html';
+    const tab=tabs.find(c=>['/journey.html','/new/journey','/new/journey/'].includes(new URL(c.url).pathname));
     if(tab)return tab.focus();return self.clients.openWindow(path);
   })());
 });

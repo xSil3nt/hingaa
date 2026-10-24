@@ -3,17 +3,15 @@ import {enableGuidanceDevices} from './guidance-devices.js';
 import {createSession,loadSession,replaceSession,browserStore} from './session-core.js';
 import {mapLibrary} from './google-map.js';
 import {leafletRegionOptions} from './map-region.js';
-import {newResults,boardingInfo} from './new-design.js';
-const redesign=document.body.dataset.theme==='new',journeyUrl=redesign?'/new/journey':'/journey.html';
+import {renderResults,boardingInfo} from './planner-view.js';
+const journeyUrl='/journey.html';
 const $=id=>document.getElementById(id);
 const escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const time=ms=>new Intl.DateTimeFormat('en-GB',{timeZone:'Indian/Maldives',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(ms));
-const date=ms=>new Intl.DateTimeFormat('en-GB',{timeZone:'Indian/Maldives',day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}).format(new Date(ms));
-const distance=m=>m>=1000?(m/1000).toFixed(1)+' km':m+' m';
 let data,selected={origin:null,destination:null},result=null,activeId=null,pinField=null,sort='arrival',loading=false;
 let searchGeneration=0,feedGeneration=0,pendingPlaces=0;
 const config=await fetch('/api/config').then(r=>r.json()).catch(()=>({}));
-const mapSetup=await mapLibrary(config.browserKey,redesign?'new':undefined),L=mapSetup.library;
+const mapSetup=await mapLibrary(config.browserKey),L=mapSetup.library;
 const map=L.map('map',{zoomControl:false,...leafletRegionOptions}).setView([4.202,73.527],13);
 L.control.zoom({position:'topright'}).addTo(map);
 const tiles=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}).addTo(map);
@@ -25,7 +23,7 @@ function resetPlan(){
   if(!result&&!loading)return;
   searchGeneration++;feedGeneration++;clearInterval(refreshTimer);result=null;activeId=null;bounds=null;journeyLayer.clearLayers();vehicleLayer.clearLayers();
   $('results').replaceChildren();
-  if(redesign)$('trip-title').textContent='Where to?';
+  $('trip-title').textContent='Where to?';
 }
 function setPlace(field,place){if(JSON.stringify(selected[field]?.coord)!==JSON.stringify(place?.coord))resetPlan();selected[field]=place;$(field).value=place?.name||'';closeOptions(field);drawPoints();
   const box=$('place-attribution');if(box)box.innerHTML=Object.values(selected).flatMap(p=>p?.attributions||[]).map(a=>{let url='';try{const u=new URL(a.providerUri);if(['http:','https:'].includes(u.protocol))url=u.href;}catch{}return url?`<a href="${escape(url)}" target="_blank" rel="noreferrer">${escape(a.provider||'Place attribution')}</a>`:escape(a.provider||'');}).join(' · ');
@@ -107,39 +105,26 @@ $('search-form').onsubmit=async e=>{
   $('results').innerHTML='<div class="skeleton"><b>Finding journeys…</b><p>Checking walks and bus arrivals.</p><div></div><div></div></div>';
   try {
     const next=await request('/api/plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...selected,mapProvider:mapSetup.provider})});
-    if(generation!==searchGeneration)return;result=next;activeId=(redesign?orderedJourneys():result.journeys)[0]?.id;render();drawJourney();if(redesign&&result.journeys.length)$('new-search').open=false;if(result.walkingNotice)message(result.walkingNotice);
+    if(generation!==searchGeneration)return;result=next;activeId=orderedJourneys()[0]?.id;render();drawJourney();if(result.journeys.length)$('new-search').open=false;if(result.walkingNotice)message(result.walkingNotice);
     const url=new URL(location.href);for(const field of ['origin','destination'])url.searchParams.set(field,JSON.stringify({name:selected[field].name,coord:selected[field].coord}));history.replaceState(null,'',url);
-    if(innerWidth<761){if(redesign)window.scrollTo({top:0,behavior:'auto'});else $('results').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});}
+    if(innerWidth<761)window.scrollTo({top:0,behavior:'auto'});
     refreshTimer=setInterval(()=>{if(!document.hidden)refreshFeeds();},30000);
   }catch(error){if(generation===searchGeneration)$('results').innerHTML=`<div class="welcome"><h2>Couldn’t load journeys</h2><p>${escape(error.message)}. Please try again.</p></div>`;}
   finally{loading=false;$('search-button').disabled=false;$('search-button').innerHTML='Find journeys <span aria-hidden="true">→</span>';}
 };
-function timingLabel(dep){return dep.source==='live'?'Live stop estimate':dep.source==='published'?'Published upcoming time':dep.source==='saved'?'Saved upcoming time':'Wait time not included';}
-function legHtml(leg,index){
-  if(leg.type==='walk'&&leg.distance===0)return '';
-  if(leg.type==='walk')return `<div class="leg walk-leg"><div class="leg-icon">↗</div><div><span class="step-kind">${leg.transfer?'Change buses':'Walk'}</span><h3>${escape(leg.to||result.destination.name)}</h3><span class="walk-time">${leg.minutes} min walk</span><span class="step-distance"> · ${distance(leg.distance)}</span></div></div>`;
-  const dep=leg.departure,unknown=dep.source==='unknown',second=index>2;
-  return `<div class="leg bus-leg ${second?'connection-leg':''}"><div class="leg-icon">▣</div><div><span class="step-kind">Take bus <span class="route-badge ${second?'second':''}">${escape(leg.number)}</span></span><h3>${escape(leg.from)}</h3><p class="bus-direction">${escape(leg.direction)}</p><div class="boarding-time ${unknown?'wait-extra':''}">${unknown?'<strong>Wait for next bus</strong>':'<span>Be at the stop by</span><strong>'+time(dep.departure-120000)+'</strong>'}</div><div class="get-off"><span>Get off at</span><h3>${escape(leg.to)}</h3><p>${leg.minutes} min ride · ${leg.stops} ${leg.stops===1?'stop':'stops'}</p></div><details class="step-more"><summary>Stops & timing details</summary><ol>${leg.stopNames.map(n=>'<li>'+escape(n)+'</li>').join('')}</ol><p>${escape(timingLabel(dep))}${unknown?'':' · '+time(dep.departure)}</p>${dep.checkedAt?'<p>Checked '+date(dep.checkedAt)+' Maldives time</p>':''}${dep.vehicleCode?'<p>Vehicle '+escape(dep.vehicleCode)+'</p>':''}<p>Ride time is estimated. Includes 2 minutes to board.${unknown?' Bus waiting is not included.':''}</p></details></div></div>`;
-}
 function routeChain(j){
   let bus=0;
   return j.legs.filter(l=>l.type==='bus'||l.minutes>0).map(l=>l.type==='bus'?'<span class="route-badge '+(bus++?'second':'')+'">'+escape(l.number)+'</span>':'<span>↗ '+l.minutes+' min</span>').join('<span aria-hidden="true">→</span>')||'<span>Walk · 0 min</span>';
 }
 function orderedJourneys(){return [...result.journeys].sort((a,b)=>sort==='walk'?a.walkMetres-b.walkMetres||a.minutes-b.minutes:sort==='changes'?a.transfers-b.transfers||a.minutes-b.minutes:(a.timing==='incomplete')-(b.timing==='incomplete')||a.minutes-b.minutes);}
 function render(){
-  const liveOpen=document.querySelector('details.live-panel')?.open||false;
   const alternativesOpen=document.querySelector('.new-alternatives')?.open||false;
-  if(redesign)$('trip-title').textContent=result?.destination?.name?'To '+result.destination.name:'Where to?';
-  const selectedButton=document.querySelector('.journey.selected [data-journey]');
-  const openDisclosures=selectedButton?.dataset.journey===activeId?[...document.querySelectorAll('.journey.selected details')].map(d=>d.open):[];
+  $('trip-title').textContent=result?.destination?.name?'To '+result.destination.name:'Where to?';
   if(!result?.journeys.length){$('results').innerHTML=`<div class="welcome"><h2>No journey found</h2><p>${escape(result?.reason)}</p><p class="small">Try a named stop or move the pin to a nearby public street.</p></div>`;journeyLayer.clearLayers();drawPoints();return;}
   const ordered=orderedJourneys();
-  $('results').innerHTML=redesign?newResults(ordered,activeId,sort,{escape,time,routeChain}):`<div class="results-heading"><h2>${result.journeys.length} journey options</h2><button class="share-button" id="share-journey" aria-label="Copy journey link">Share</button></div><p class="timing-note">Approximate times · Maldives time</p><div class="sorts"><button data-sort="arrival" class="${sort==='arrival'?'selected':''}">Fastest</button><button data-sort="changes" class="${sort==='changes'?'selected':''}">Fewer changes</button><button data-sort="walk" class="${sort==='walk'?'selected':''}">Less walking</button></div>${ordered.map(j=>{
-    const active=j.id===activeId,buses=j.legs.filter(l=>l.type==='bus');
-    return `<article class="journey ${active?'selected':''}"><button class="journey-head" data-journey="${escape(j.id)}" aria-expanded="${active}"><span class="journey-label">${escape(j.timing==='incomplete'?'Waiting time extra':(j.labels[0]==='Earliest estimate'?'Fastest':j.labels[0]))}</span><span class="journey-top"><span class="duration">${j.minutes}<small>${j.timing==='incomplete'?'min + wait':'min approx.'}</small></span><span class="arrival">${j.arrival?'Arrive ~'+time(j.arrival):'Bus wait extra'}</span></span><span class="route-chain">${routeChain(j)}</span><span class="meta"><span>${buses.length?(j.transfers?j.transfers+' change':'Direct bus'):'Walk only'}${j.walkMetres?' · '+distance(j.walkMetres)+' walking':''}</span><span>${j.fare===null?'Confirm fare':'MVR '+j.fare}</span></span></button>${active?`<div class="details">${j.legs.map(legHtml).join('')}<button class="primary start-journey" data-start="${escape(j.id)}">Start this journey →</button></div>`:''}</article>`;
-  }).join('')}<details class="live-panel"><summary>Live bus updates</summary><div class="live-title"><h2>Stop arrivals & vehicles</h2><button id="refresh-feed">Refresh</button></div><p class="feed-summary">Refreshes every 30 seconds. Retrieval time is not the vehicle’s GPS-fix time.</p><div id="feed-content"></div><p class="small">Bus dots show fetched positions, not confirmed direction. Use the stop arrival and route instructions to choose a bus.</p></details>`;
+  $('results').innerHTML=renderResults(ordered,activeId,sort,{escape,time,routeChain});
   document.querySelectorAll('[data-journey]').forEach(b=>b.onclick=()=>{activeId=b.dataset.journey;feedGeneration++;render();drawJourney();refreshFeeds();});
-  document.querySelectorAll('[data-sort]').forEach(b=>b.onclick=()=>{sort=b.dataset.sort;if(redesign)activeId=orderedJourneys()[0]?.id;render();if(redesign)drawJourney();});
+  document.querySelectorAll('[data-sort]').forEach(b=>b.onclick=()=>{sort=b.dataset.sort;activeId=orderedJourneys()[0]?.id;render();drawJourney();});
   document.querySelectorAll('[data-start]').forEach(button=>button.onclick=async()=>{
     try{
       const old=loadSession(browserStore);
@@ -151,64 +136,52 @@ function render(){
       location.href=journeyUrl;
     }catch(error){message(error.message||'Couldn’t save this journey. Enable site storage and try again.');}
   });
-  if($('refresh-feed'))$('refresh-feed').onclick=refreshFeeds;renderFeeds();
-  const livePanel=document.querySelector('details.live-panel');if(livePanel)livePanel.open=liveOpen;
+  renderFeeds();
   const alternatives=document.querySelector('.new-alternatives');if(alternatives)alternatives.open=alternativesOpen;
   $('share-journey').onclick=async()=>{try{await navigator.clipboard.writeText(location.href);$('share-journey').textContent='Copied';setTimeout(()=>{if($('share-journey'))$('share-journey').textContent='Share';},2000);}catch{message('Copy the address from your browser to share this journey.');}};
-  document.querySelectorAll('.journey.selected details').forEach((d,i)=>{d.open=!!openDisclosures[i];});
 }
 function current(){return result?.journeys.find(j=>j.id===activeId);}
 function drawJourney(){
   journeyLayer.clearLayers();vehicleLayer.clearLayers();drawPoints();const journey=current();if(!journey)return;
   let busIndex=0,points=[];
   for(const leg of journey.legs){const coords=leg.coords.map(p=>[p[1],p[0]]);points.push(...coords);
-    L.polyline(coords,{color:leg.type==='walk'?(redesign?'#e1a345':'#687585'):busIndex++?(redesign?'#e1a345':'#337e79'):(redesign?'#38c3df':'#585b9d'),weight:leg.type==='walk'?4:6,opacity:.95,dashArray:leg.type==='walk'?'3 8':null}).addTo(journeyLayer);
-    if(leg.type==='bus')for(const c of [coords[0],coords.at(-1)])L.circleMarker(c,{radius:5,color:redesign?'#38c3df':'#585b9d',fillColor:redesign?'#172730':'white',fillOpacity:1,weight:2}).addTo(journeyLayer);
+    L.polyline(coords,{color:leg.type==='walk'?'#e1a345':busIndex++?'#e1a345':'#38c3df',weight:leg.type==='walk'?4:6,opacity:.95,dashArray:leg.type==='walk'?'3 8':null}).addTo(journeyLayer);
+    if(leg.type==='bus')for(const c of [coords[0],coords.at(-1)])L.circleMarker(c,{radius:5,color:'#38c3df',fillColor:'#172730',fillOpacity:1,weight:2}).addTo(journeyLayer);
   }
   if(points.length){bounds=L.latLngBounds(points);map.fitBounds(bounds,{padding:[45,55],maxZoom:16});}renderFeeds();
 }
-if($('fit'))$('fit').onclick=()=>{if(bounds)map.fitBounds(bounds,{padding:[45,55],maxZoom:16});else map.setView([4.202,73.527],13);};
 function renderFeeds(){
-  const feedContent=$('feed-content');if(!feedContent&&!redesign)return;vehicleLayer.clearLayers();
-  if(redesign)document.querySelectorAll('[data-boarding-index]').forEach(el=>{const leg=current()?.legs[+el.dataset.boardingIndex];if(leg)el.innerHTML=boardingInfo(leg,{escape,time});});
-  const buses=current()?.legs.filter(l=>l.type==='bus')||[];
-  const now=Date.now();
-  const feedHtml=buses.length?buses.map(leg=>{
-    const f=result.feeds?.[leg.routeCode];if(!f)return `<div class="feed-route"><b>${escape(leg.number)}</b><p class="feed-empty">No feed checked for this option yet. Tap Refresh.</p></div>`;
-    const fresh=e=>e?.ok&&now-Date.parse(e.fetchedAtUtc)<90000;
-    const liveFresh=fresh(f.live),etaFresh=fresh(f.eta);
-    if(liveFresh)for(const bus of f.live.data?.busList||[]){const lat=+bus.latitude,lng=+bus.longitude;if(!Number.isFinite(lat)||!Number.isFinite(lng)||lat<4.14||lat>4.27||lng<73.47||lng>73.57)continue;
-      const marker=L.marker([lat,lng],{icon:L.divIcon({className:'',html:`<div class="bus-marker">${escape(leg.number)}</div>`,iconSize:[34,21],iconAnchor:[17,10]})}).addTo(vehicleLayer);
+  vehicleLayer.clearLayers();
+  document.querySelectorAll('[data-boarding-index]').forEach(el=>{const leg=current()?.legs[+el.dataset.boardingIndex];if(leg)el.innerHTML=boardingInfo(leg,{escape,time});});
+  for(const leg of current()?.legs.filter(l=>l.type==='bus')||[]){
+    const live=result.feeds?.[leg.routeCode]?.live;
+    const age=Date.now()-Date.parse(live?.fetchedAtUtc);
+    if(!live?.ok||!Number.isFinite(age)||age< -5000||age>=90000)continue;
+    for(const bus of live.data?.busList||[]){
+      const lat=+bus.latitude,lng=+bus.longitude;
+      if(!Number.isFinite(lat)||!Number.isFinite(lng)||lat<4.14||lat>4.27||lng<73.47||lng>73.57)continue;
+      const marker=L.marker([lat,lng],{icon:L.divIcon({className:'',html:'<div class="bus-marker">'+escape(leg.number)+'</div>',iconSize:[34,21],iconAnchor:[17,10]})}).addTo(vehicleLayer);
       marker.bindTooltip(escape(leg.number+' · '+bus.busCode));
-      marker.bindPopup(`${escape(bus.plateNumber||bus.busCode)}<br>Retrieved ${time(f.live.fetchedAtUtc)}<br>GPS-fix age and direction unknown.`);
+      marker.bindPopup(escape(bus.plateNumber||bus.busCode)+'<br>Retrieved '+time(live.fetchedAtUtc)+'<br>GPS-fix age and direction unknown.');
     }
-    const rows=etaFresh?['inboundStopsETAList','outboundStopsETAList'].flatMap(k=>f.eta.data?.[k]||[]).filter(r=>String(r.stopCode)===leg.fromCode):[];
-    return `<div class="feed-route"><b>${escape(leg.number)} · ${escape(leg.from)}</b>${rows.length?rows.slice(0,5).map(r=>`<div class="feed-row"><span><span class="live-dot"></span>${escape(r.eta)}<br><small>${escape(r.vehicleCode)} · direction ${escape(r.direction)} · ${escape(r.destination||'Destination unknown')}${liveFresh&&f.live.data?.busList?.some(b=>String(b.busCode)===String(r.vehicleCode))?' · position on map':''}</small></span></div>`).join(''):`<p class="feed-empty">${etaFresh?(leg.departure.source==='unknown'?'Waiting time is not included in the travel estimate.':'Using the departure time shown above.'):f.eta?.ok?'Arrival check is out of date. Refresh to check again.':'Arrival feed unavailable.'}</p>`}<p class="small">${etaFresh?'Arrivals checked '+time(f.eta.fetchedAtUtc)+'. ':''}${liveFresh?(f.live.data?.busList||[]).length+' vehicle positions checked '+time(f.live.fetchedAtUtc)+'.':f.live?.ok?'Vehicle check expired.':'Vehicle feed unavailable.'}</p>${!etaFresh?'<p class="small">Published / saved timing may still appear above, with its own label.</p>':''}</div>`;
-  }).join(''):'<p class="small">No bus needed for this walking option.</p>';
-  if(feedContent)feedContent.innerHTML=feedHtml;
+  }
 }
 async function refreshFeeds(){
   const journey=current();if(!journey||loading)return;const generation=++feedGeneration;
-  if($('refresh-feed')){$('refresh-feed').disabled=true;$('refresh-feed').textContent='Checking…';}
   try{
     const updated=await request('/api/plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({origin:result.origin,destination:result.destination,mapProvider:mapSetup.provider,walkingSession:result.walkingSession})});
     if(generation!==feedGeneration)return;
-    const oldId=activeId;result=updated;if(!result.journeys.some(j=>j.id===activeId))activeId=(redesign?orderedJourneys():result.journeys)[0]?.id;
+    const oldId=activeId;result=updated;if(!result.journeys.some(j=>j.id===activeId))activeId=orderedJourneys()[0]?.id;
     render();if(oldId!==activeId)drawJourney();
   }catch{if(generation===feedGeneration)message('Couldn’t refresh. The shown options are from the last successful check. Find journeys to retry.');}
-  if($('refresh-feed')){$('refresh-feed').disabled=false;$('refresh-feed').textContent='Refresh';}
 }
-setInterval(()=>{if(result){renderFeeds();if(Date.now()-Date.parse(result.computedAt)>90000)message('These journeys need a fresh departure check. Tap Refresh or Find journeys.');}},15000);
+setInterval(()=>{if(result){renderFeeds();if(Date.now()-Date.parse(result.computedAt)>90000)message('These journeys need a fresh departure check. Edit the trip and find journeys again.');}},15000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&result)refreshFeeds();});
 try {
-  const saved=loadSession(browserStore);
-  if(saved&&saved.status!=='completed'&&!redesign){
-    const link=document.createElement('a');link.href=journeyUrl;link.className='resume-journey';link.textContent='Resume your journey →';document.querySelector('.planner').prepend(link);
-  }
   data=await request('/api/bootstrap');
   locateUser(false);
   // Local street context remains visible when online map tiles are unavailable.
-  L.polyline(data.streets.map(edge=>edge.map(p=>[p[1],p[0]])),{color:redesign?'#46535c':'#adc1b8',weight:1,opacity:.35,interactive:false}).addTo(streetLayer);
+  L.polyline(data.streets.map(edge=>edge.map(p=>[p[1],p[0]])),{color:'#46535c',weight:1,opacity:.35,interactive:false}).addTo(streetLayer);
   const query=new URL(location.href).searchParams;let shared=0;
   for(const [field,id] of [['origin','103'],['destination','401']]){
     let place=data.places.find(p=>p.id===id);

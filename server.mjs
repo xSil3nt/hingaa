@@ -40,6 +40,10 @@ function endpoint(p){return p&&typeof p.name==='string'&&p.name.length<200&&Arra
 export const handler=async(req,res)=>{
   try {
     const u=new URL(req.url,'http://localhost');
+    const legacyPages={'/new':'/','/new/':'/','/new.html':'/','/new/journey':'/journey.html','/new/journey/':'/journey.html','/new-journey.html':'/journey.html'};
+    if(Object.hasOwn(legacyPages,u.pathname)){
+      res.writeHead(308,{'Location':legacyPages[u.pathname]+u.search});res.end();return;
+    }
     if(u.pathname==='/api/config')return json(res,200,{browserKey:process.env.GOOGLE_MAPS_BROWSER_KEY||null,googleConfigured:!!process.env.GOOGLE_MAPS_API_KEY});
     if(u.pathname==='/api/places'){
       const q=(u.searchParams.get('q')||'').trim(),session=u.searchParams.get('session')||'';
@@ -80,8 +84,7 @@ export const handler=async(req,res)=>{
       return json(res,200,{...planner.plan(origin,destination,feeds,Date.now(),options),feeds,walkingSession:sessionId,walkingProvider:context?'google':'osm',walkingNotice});
     }
     if(u.pathname.startsWith('/api/'))return json(res,404,{error:'Not found'});
-    const pages={'/':'index.html','/new':'new.html','/new/':'new.html','/new/journey':'new-journey.html','/new/journey/':'new-journey.html'};
-    const name=pages[u.pathname]||decodeURIComponent(u.pathname.slice(1));
+    const name=u.pathname==='/'?'index.html':decodeURIComponent(u.pathname.slice(1));
     const file=path.resolve(root,'public',name);if(!file.startsWith(path.join(root,'public')+path.sep))return json(res,403,{error:'Forbidden'});
     if(!fs.existsSync(file)||fs.statSync(file).isDirectory())return json(res,404,{error:'Not found'});
     res.writeHead(200,{'Content-Type':mime[path.extname(file)]||'application/octet-stream','Cache-Control':'no-cache'});fs.createReadStream(file).pipe(res);

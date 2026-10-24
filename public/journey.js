@@ -4,7 +4,7 @@ import {mapLibrary} from './google-map.js';
 import {leafletRegionOptions} from './map-region.js';
 import {SESSION_KEY,LEASE_KEY,browserStore,isCurrentSession,loadSession,saveSession,confirmStep,previousStep,ProgressTracker} from './session-core.js';
 const $=id=>document.getElementById(id),escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const redesign=document.body.dataset.theme==='new',homeUrl=redesign?'/new':'/';
+const homeUrl='/';
 const locationDot=new UserLocationMarker();
 const owner=crypto.randomUUID();let session=loadSession(browserStore),watch=null,wake=null,registration=null,map=null,L=null,userLayer=null,routeLayer=null,follow=true,lastFix=null,tracker=new ProgressTracker(),polling=false,leaseTimer=null,remaining=null;
 function alertText(text){$('alert').textContent=text;$('alert').hidden=!text;}
@@ -33,15 +33,15 @@ function render(){
   $('steps').innerHTML=session.legs.map((l,i)=>'<li class="'+(i===session.index?'current':i<session.index?'done':'')+'">'+escape(l.type==='bus'?l.number+' · '+l.from+' → '+l.to:'Walk to '+(l.to||session.destination.name))+'</li>').join('');
 }
 function drawRoute(){if(!map||!session)return;routeLayer.clearLayers();const leg=session.legs[session.index];if(!leg)return;
-  L.polyline(leg.coords.map(p=>[p[1],p[0]]),{color:leg.type==='walk'?(redesign?'#e1a345':'#62667c'):(redesign?'#38c3df':'#585b9d'),weight:6,opacity:.95,dashArray:leg.type==='walk'?'3 8':null}).addTo(routeLayer);
-  for(const p of [leg.coords[0],leg.coords.at(-1)])L.circleMarker([p[1],p[0]],{radius:7,color:redesign?'#38c3df':'#505b94',fillColor:redesign?'#172730':'#fff',fillOpacity:1}).addTo(routeLayer);
+  L.polyline(leg.coords.map(p=>[p[1],p[0]]),{color:leg.type==='walk'?'#e1a345':'#38c3df',weight:6,opacity:.95,dashArray:leg.type==='walk'?'3 8':null}).addTo(routeLayer);
+  for(const p of [leg.coords[0],leg.coords.at(-1)])L.circleMarker([p[1],p[0]],{radius:7,color:'#38c3df',fillColor:'#172730',fillOpacity:1}).addTo(routeLayer);
   map.fitBounds(L.latLngBounds(leg.coords.map(p=>[p[1],p[0]])),{maxZoom:16});
 }
 async function notify(event){
   if(!session||!isCurrentSession(browserStore,session.id))return;
   alertText(event.title+' · '+event.body);
   navigator.vibrate?.([160,80,160]);
-  if(registration&&globalThis.Notification?.permission==='granted')try{await registration.showNotification(event.title,{body:event.body,icon:'/icon.svg',tag:'hingaa:'+session.id+':'+event.key,data:{session:session.id,path:redesign?'/new/journey':'/journey.html'}});}catch{alertText(event.title+' · '+event.body+' (Device notifications unavailable.)');}
+  if(registration&&globalThis.Notification?.permission==='granted')try{await registration.showNotification(event.title,{body:event.body,icon:'/icon.svg',tag:'hingaa:'+session.id+':'+event.key,data:{session:session.id,path:'/journey.html'}});}catch{alertText(event.title+' · '+event.body+' (Device notifications unavailable.)');}
 }
 function gotPosition(position){
   if(!session||lease()?.owner!==owner||!isCurrentSession(browserStore,session.id)){stopTracking();render();return;}
@@ -91,7 +91,7 @@ setInterval(refreshFeed,30000);
 if(session)session.status=session.status==='completed'?'completed':'paused';
 render();
 if(session)try{
-  const config=await(await fetch('/api/config',{signal:AbortSignal.timeout(10000)})).json();const setup=await mapLibrary(config.browserKey,redesign?'new':undefined);L=setup.library;map=L.map('map',leafletRegionOptions).setView([4.202,73.527],13);locationDot.attach(map,L);L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap contributors'}).addTo(map);routeLayer=L.layerGroup().addTo(map);userLayer=L.layerGroup().addTo(map);map.on('dragstart',()=>{follow=false;});drawRoute();refreshFeed();
+  const config=await(await fetch('/api/config',{signal:AbortSignal.timeout(10000)})).json();const setup=await mapLibrary(config.browserKey);L=setup.library;map=L.map('map',leafletRegionOptions).setView([4.202,73.527],13);locationDot.attach(map,L);L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap contributors'}).addTo(map);routeLayer=L.layerGroup().addTo(map);userLayer=L.layerGroup().addTo(map);map.on('dragstart',()=>{follow=false;});drawRoute();refreshFeed();
 }catch{alertText('Map unavailable. Your journey instructions are still here.');}
 if(session&&session.status!=='completed')startTracking();
 if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').then(r=>{registration=r;}).catch(()=>{});

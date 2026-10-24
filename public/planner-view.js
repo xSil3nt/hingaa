@@ -8,7 +8,7 @@ export function boardingInfo(leg,{escape,time},now=Date.now()){
   const minutes=live?Math.max(0,Math.ceil((dep.departure-now)/60000)):0;
   return 'Board at '+escape(leg.from)+clock+(live?'<span class="new-live-arrival"><span aria-hidden="true"></span>Live · '+(minutes?'~'+minutes+' min':'arriving')+(dep.vehicleCode?' · '+escape(dep.vehicleCode):'')+'</span>':'');
 }
-export function newResults(ordered,activeId,sort,{escape,time,routeChain}){
+export function renderResults(ordered,activeId,sort,{escape,time,routeChain}){
   const j=ordered.find(j=>j.id===activeId)||ordered[0];
   const steps=j.legs.filter(l=>l.type==='bus'||l.distance>0);
   return `<div class="new-preferences"><div class="new-preference-segments" role="group" aria-label="Route preference">${[['arrival','Fastest'],['walk','Less walking'],['changes','Fewer transfers']].map(([value,label])=>`<button data-sort="${value}" aria-pressed="${sort===value}" class="${sort===value?'selected':''}">${label}</button>`).join('')}</div></div>

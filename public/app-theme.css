@@ -1,4 +1,4 @@
-/* A separate map-first design. Shared planner and tracking behavior stay intact. */
+/* Shared map-first interface. */
 .new-app{--ink:#f7f6f2;--muted:#a5a7b5;--brand:#38c3df;--line:#393945;--pale:#292936;--bg:#1e1e29;--bus:#38c3df;--second:#e1a345;--gold:#e1a345;--cyan:#38c3df;--black:#090a0d;background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,sans-serif}
 .new-header{height:82px;position:relative;z-index:1100;display:grid;grid-template-columns:1fr auto 1fr;gap:12px;padding:0 26px;background:#050608;border:0;border-radius:0 0 26px 26px}
 .new-app .new-wordmark{color:var(--gold);font-family:Impact,'Arial Narrow',sans-serif;font-size:38px;letter-spacing:1.5px;font-style:italic;line-height:1;text-decoration:none}.new-wordmark span{color:var(--cyan)}
