@@ -128,7 +128,7 @@ export class Planner {
     const dep=chooseDeparture(route,from,ready,feed,now,this.snapshotAt);
     return {type:'bus',routeCode:route.code,number:route.routeNumber,routeName:route.name,from:from.name,to:to.name,fromCode:from.code,toCode:to.code,
       fromOrder:from.order,toOrder:to.order,direction:`via ${route.stops[i+1].name}`,terminal:route.endStationName,stops:j-i,
-      stopNames:route.stops.slice(i+1,j+1).map(s=>s.name),coords:g.line.slice(g.indices[i],g.indices[j]+1),distance:Math.round(d),minutes:rideMinutes,
+      stopNames:route.stops.slice(i+1,j+1).map(s=>s.name),stopPoints:route.stops.slice(i,j+1).map(s=>({code:s.code,name:s.name,coord:s.coord})),coords:g.line.slice(g.indices[i],g.indices[j]+1),distance:Math.round(d),minutes:rideMinutes,
       departure:dep,arrival:dep.departure+rideMinutes*60000,fare:route.isDistanceFareType?null:+route.fare};
   }
   plan(origin,destination,feeds={},now=Date.now(),options={}) {

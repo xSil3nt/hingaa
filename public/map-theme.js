@@ -1,8 +1,8 @@
 // Editable palette and embedded Google Maps style. No Cloud map ID required.
 export const mapPalette = {
-  water: '#b7deda', land: '#f4f1e8', park: '#dce7d4',
+  water: '#b9e6dd', land: '#f2e7df', park: '#d3e8d9',
   road: '#ffffff', roadEdge: '#dddcd0', text: '#526c65',
-  bus: '#17695a', transfer: '#536fb5', walk: '#687585', vehicle: '#f5c95e'
+  bus: '#48599f', transfer: '#177d70', walk: '#687585', vehicle: '#f5c95e'
 };
 export const mapStyle = [
   {elementType:'geometry',stylers:[{color:mapPalette.land}]},

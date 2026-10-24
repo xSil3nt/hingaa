@@ -23,7 +23,7 @@ export async function mapLibrary(key){
     }
     const wrap=item=>({addTo(group){group.add(item);return this;},bindTooltip(text){item.setTitle?.(text);return this;},bindPopup(html){const popup=new g.InfoWindow({content:html});item.addListener('click',()=>popup.open({map:item.getMap(),anchor:item}));return this;}});
     const library={
-      map(id){return {native,setView(p,z){this.native.setCenter(latlng(p));this.native.setZoom(z);return this;},on(name,callback){this.native.addListener(name,e=>callback({latlng:{lat:e.latLng.lat(),lng:e.latLng.lng()}}));return this;},fitBounds(bounds,options){this.native.fitBounds(bounds,{top:45,bottom:55,left:45,right:45});g.event.addListenerOnce(this.native,'idle',()=>{if(this.native.getZoom()>(options?.maxZoom||18))this.native.setZoom(options.maxZoom);});}};},
+      map(id){return {native,setView(p,z){this.native.setCenter(latlng(p));this.native.setZoom(z);return this;},on(name,callback){this.native.addListener(name,e=>callback(e?.latLng?{latlng:{lat:e.latLng.lat(),lng:e.latLng.lng()}}:e));return this;},fitBounds(bounds,options){this.native.fitBounds(bounds,{top:45,bottom:55,left:45,right:45});g.event.addListenerOnce(this.native,'idle',()=>{if(this.native.getZoom()>(options?.maxZoom||18))this.native.setZoom(options.maxZoom);});}};},
       control:{zoom:()=>noop},tileLayer:()=>noop,layerGroup:()=>new Group(),divIcon:options=>options,
       latLngBounds(points){const b=new g.LatLngBounds();points.forEach(p=>b.extend(latlng(p)));return b;},
       marker(p,options){const el=document.createElement('div');el.innerHTML=options?.icon?.html||'';const isBus=!!el.querySelector('.bus-marker'),dest=!!el.querySelector('.destination');

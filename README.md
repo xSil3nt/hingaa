@@ -102,3 +102,13 @@ Successful searches put the endpoints in the page URL. Share copies that link; o
 ## Simpler journey instructions
 
 The product name is `hingaa`. The main journey view focuses on bus numbers, boarding stops, highlighted be-at-stop times, and highlighted get-off stops. Stop lists, timing provenance and vehicle metadata are under expandable details; live updates are collapsed initially. Zero-distance walk steps, duplicate connection notes and the Leave now labels are removed. Waiting uncertainty remains visible in amber when departure data is unavailable.
+
+## Active journey guidance
+
+Choose **Start this journey** to open `/journey.html`. The selected route, leg, boarding/riding phase, stop progress and emitted alert IDs are saved in local site storage for six hours. Reloading resumes the same step in a paused state; no location prompt occurs until the user starts live guidance. End removes the session. A short-lived tab lease prevents two tabs from issuing duplicate GPS alerts. Route/step data is saved; a GPS history is not.
+
+Location uses `watchPosition` with explicit browser permission. Accurate fresh fixes drive walking arrival and ordered bus-stop progress. Two nearby fixes are required; inaccurate, stale, implausibly fast and off-route fixes cannot advance bus stops. Boarding and alighting require user confirmation. Prepare-to-alight and stop alerts are deduplicated across reloads. A screen wake lock is requested where supported while guiding, released on pause/end, and reacquired when visible. The map follows a blue location dot; dragging stops follow and the Follow button recenters.
+
+Device notifications are opt-in and use a notification-only service worker; there is **no background GPS or push subscription**. Foreground in-app alerts work without notification permission. Mobile browsers can suspend GPS when hidden/locked, including installed PWAs. Keep the journey screen open. iPhone notification support may require Home Screen installation. Native background location would be needed to promise locked-phone stop alerts. Live RTL boarding updates poll every 30 seconds; they do not replace GPS or identify which vehicle a user boarded.
+
+Automated session fixtures cover transfers, pause/restore/expiry, permission-independent manual progression, duplicate and stale fixes, poor accuracy, jumping GPS, route deviation, stop alerts and explicit boarding/alighting. Real phone GPS, notification delivery, vibration and a physical bus journey still require field testing. Theme colors are charcoal, periwinkle, mint and cream, with darker accessible control colors.
