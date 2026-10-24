@@ -78,3 +78,7 @@ The Vercel function in `api/index.mjs` runs the same request handler as the loca
 Set `GOOGLE_MAPS_API_KEY` (private Places/Routes key) and `GOOGLE_MAPS_BROWSER_KEY` (website-restricted Maps JavaScript key) in Vercel's production environment. Never commit `.env.local`. The browser key allows localhost plus `https://shazin.dev/*` and `https://*.shazin.dev/*`; the intended deployment is `https://hingaa.shazin.dev`. A Vercel-generated hostname needs its own browser-key referrer allowance if used for Maps.
 
 Walking contexts and feed caches are per warm function instance. A different instance may recompute walks; there is no durable shared cache. The local server still starts with `npm start`.
+
+## Map appearance
+
+`public/map-theme.js` contains the editable Google map palette and embedded style rules: lagoon water, ivory land, quiet roads, no commercial POI or transit clutter. Street and locality names remain available. Route/vehicle overlays and required Google attribution remain visible. No Cloud map ID is needed. The header badge, About dialog, destination shortcuts and introductory welcome block have been removed from the UI.

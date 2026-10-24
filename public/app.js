@@ -17,7 +17,7 @@ function message(text){$('message').textContent=text;$('message').hidden=!text;}
 function resetPlan(){
   if(!result&&!loading)return;
   searchGeneration++;feedGeneration++;clearInterval(refreshTimer);result=null;activeId=null;bounds=null;journeyLayer.clearLayers();vehicleLayer.clearLayers();
-  $('results').innerHTML='<div class="welcome"><h2>Places updated</h2><p>Find journeys to calculate a new route.</p></div>';
+  $('results').replaceChildren();
 }
 function setPlace(field,place){if(JSON.stringify(selected[field]?.coord)!==JSON.stringify(place?.coord))resetPlan();selected[field]=place;$(field).value=place?.name||'';closeOptions(field);drawPoints();
   const box=$('place-attribution');if(box)box.innerHTML=Object.values(selected).flatMap(p=>p?.attributions||[]).map(a=>{let url='';try{const u=new URL(a.providerUri);if(['http:','https:'].includes(u.protocol))url=u.href;}catch{}return url?`<a href="${escape(url)}" target="_blank" rel="noreferrer">${escape(a.provider||'Place attribution')}</a>`:escape(a.provider||'');}).join(' · ');
@@ -152,15 +152,11 @@ async function refreshFeeds(){
 }
 setInterval(()=>{if(result){renderFeeds();if(Date.now()-Date.parse(result.computedAt)>90000)message('These journeys need a fresh departure check. Tap Refresh or Find journeys.');}},15000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&result)refreshFeeds();});
-$('about').onclick=()=>$('data-dialog').showModal();document.querySelector('.dialog-close').onclick=()=>$('data-dialog').close();
 try {
   data=await request('/api/bootstrap');
   // Local street context remains visible when online map tiles are unavailable.
   L.polyline(data.streets.map(edge=>edge.map(p=>[p[1],p[0]])),{color:'#adc1b8',weight:1,opacity:.35,interactive:false}).addTo(streetLayer);
   setPlace('origin',data.places.find(p=>p.id==='103'));setPlace('destination',data.places.find(p=>p.id==='401'));
-  $('presets').innerHTML=['401','306','602','606'].map(id=>data.presets.find(p=>p.id===id)).filter(Boolean).map(p=>`<button class="preset" data-id="${escape(p.id)}">${escape(p.name)}</button>`).join('');
-  $('presets').querySelectorAll('button').forEach(b=>b.onclick=()=>{setPlace('destination',data.places.find(p=>p.id===b.dataset.id));message('Destination selected. Find journeys to continue.');});
-  $('snapshot-info').textContent=`Saved RTL snapshot: ${date(data.snapshotAt)} Maldives time. Upcoming times are only used on that local date; fresh published timings are requested when available. Walking map extracted 24 October 2026.`;
   if(mapSetup.error)message(mapSetup.error);
   document.querySelector('.map-caption').textContent=mapSetup.provider==='google'?'Google Maps · RTL buses':'Greater Malé · RTL bus network';
 }catch{message('The local server could not load the transport data. Reload after restarting the server.');$('search-button').disabled=true;}
