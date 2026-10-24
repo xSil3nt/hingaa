@@ -29,3 +29,7 @@ MTCC RTL API
 - Sea transport (Ferry, Speedboat) 
 - Integrate planning trips to airport when users enter flight number
 - Expand beyond greater male' region
+
+# AI Tools declaration
+
+AI tools were used in the making of this. They include OpenAI ChatGPT & Cursor Autocomplete
