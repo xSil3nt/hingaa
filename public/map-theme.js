@@ -1,5 +1,5 @@
-// An atlas-like base: pale periwinkle sea, cream islands, mint parks, sparse labels.
-export const mapPalette={water:'#dce4f4',land:'#eee3dc',park:'#b8e7d6',road:'#fffaf5',roadEdge:'#e0d2cb',text:'#55556b',bus:'#6475ca',transfer:'#177d70',walk:'#73778b',vehicle:'#f5c95e'};
+// A graphic transit palette: mint water, periwinkle islands and cream streets.
+export const mapPalette={water:'#9de5d2',land:'#b9c2ef',park:'#eddfd5',road:'#fff8ee',roadEdge:'#a8b2df',text:'#343347',bus:'#6475ca',transfer:'#177d70',walk:'#73778b',vehicle:'#f5c95e'};
 export function mapStyles(zoom=13){return [
   {elementType:'geometry',stylers:[{color:mapPalette.land}]},
   {elementType:'labels',stylers:[{visibility:'off'}]},
@@ -14,7 +14,7 @@ export function mapStyles(zoom=13){return [
   {featureType:'road.highway',elementType:'geometry.fill',stylers:[{color:mapPalette.road}]},
   {featureType:'road.highway',elementType:'geometry.stroke',stylers:[{color:mapPalette.roadEdge},{weight:0.3}]},
   {featureType:'road',elementType:'labels.text',stylers:[{visibility:zoom>=16?'on':'off'}]},
-  {featureType:'road',elementType:'labels.text.fill',stylers:[{color:'#797185'}]},
+  {featureType:'road',elementType:'labels.text.fill',stylers:[{color:'#50516c'}]},
   {featureType:'road',elementType:'labels.text.stroke',stylers:[{color:mapPalette.land},{weight:3}]},
   {featureType:'water',elementType:'geometry',stylers:[{color:mapPalette.water}]}
 ];}
