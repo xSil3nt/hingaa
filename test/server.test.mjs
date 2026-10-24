@@ -9,6 +9,10 @@ test('HTTP app validates requests and works with unavailable upstream feeds',asy
     const bootstrap=await(await fetch(url+'/api/bootstrap')).json();assert.equal(bootstrap.routes.length,15);
     assert.ok(bootstrap.places.some(p=>p.aliases.includes('airport')));
     assert.equal((await fetch(url+'/')).status,200);
+    for(const path of ['/new','/new/','/new/journey','/new/journey/']){
+      const page=await fetch(url+path);assert.equal(page.status,200);assert.match(await page.text(),/data-theme="new"/);
+    }
+    assert.doesNotMatch(await(await fetch(url+'/')).text(),/data-theme="new"/);
     assert.equal((await fetch(url+'/api/plan',{method:'POST',body:JSON.stringify({origin:{coord:[0,0]},destination:{coord:[0,0]}})})).status,400);
     const origin=bootstrap.places.find(p=>p.id==='103'),destination=bootstrap.places.find(p=>p.id==='306');
     const res=await fetch(url+'/api/plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({origin,destination})});

@@ -80,7 +80,8 @@ export const handler=async(req,res)=>{
       return json(res,200,{...planner.plan(origin,destination,feeds,Date.now(),options),feeds,walkingSession:sessionId,walkingProvider:context?'google':'osm',walkingNotice});
     }
     if(u.pathname.startsWith('/api/'))return json(res,404,{error:'Not found'});
-    const name=u.pathname==='/'?'index.html':decodeURIComponent(u.pathname.slice(1));
+    const pages={'/':'index.html','/new':'new.html','/new/':'new.html','/new/journey':'new-journey.html','/new/journey/':'new-journey.html'};
+    const name=pages[u.pathname]||decodeURIComponent(u.pathname.slice(1));
     const file=path.resolve(root,'public',name);if(!file.startsWith(path.join(root,'public')+path.sep))return json(res,403,{error:'Forbidden'});
     if(!fs.existsSync(file)||fs.statSync(file).isDirectory())return json(res,404,{error:'Not found'});
     res.writeHead(200,{'Content-Type':mime[path.extname(file)]||'application/octet-stream','Cache-Control':'no-cache'});fs.createReadStream(file).pipe(res);

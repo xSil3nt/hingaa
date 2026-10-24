@@ -2,15 +2,17 @@ import {UserLocationMarker} from './location-marker.js';
 import {enableGuidanceDevices} from './guidance-devices.js';
 import {createSession,loadSession,replaceSession,browserStore} from './session-core.js';
 import {mapLibrary} from './google-map.js';
+import {newResults} from './new-design.js';
+const redesign=document.body.dataset.theme==='new',journeyUrl=redesign?'/new/journey':'/journey.html';
 const $=id=>document.getElementById(id);
 const escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const time=ms=>new Intl.DateTimeFormat('en-GB',{timeZone:'Indian/Maldives',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(ms));
 const date=ms=>new Intl.DateTimeFormat('en-GB',{timeZone:'Indian/Maldives',day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}).format(new Date(ms));
 const distance=m=>m>=1000?(m/1000).toFixed(1)+' km':m+' m';
-let data,selected={origin:null,destination:null},result=null,activeId=null,pinField=null,sort='arrival',loading=false;
+let data,selected={origin:null,destination:null},result=null,activeId=null,pinField=null,sort=redesign?'walk':'arrival',loading=false;
 let searchGeneration=0,feedGeneration=0,pendingPlaces=0;
 const config=await fetch('/api/config').then(r=>r.json()).catch(()=>({}));
-const mapSetup=await mapLibrary(config.browserKey),L=mapSetup.library;
+const mapSetup=await mapLibrary(config.browserKey,redesign?'new':undefined),L=mapSetup.library;
 const map=L.map('map',{zoomControl:false}).setView([4.202,73.527],13);
 L.control.zoom({position:'topright'}).addTo(map);
 const tiles=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}).addTo(map);
@@ -103,9 +105,9 @@ $('search-form').onsubmit=async e=>{
   $('results').innerHTML='<div class="skeleton"><b>Finding journeys…</b><p>Checking walks and bus arrivals.</p><div></div><div></div></div>';
   try {
     const next=await request('/api/plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...selected,mapProvider:mapSetup.provider})});
-    if(generation!==searchGeneration)return;result=next;activeId=result.journeys[0]?.id;render();drawJourney();if(result.walkingNotice)message(result.walkingNotice);
+    if(generation!==searchGeneration)return;result=next;activeId=(redesign?orderedJourneys():result.journeys)[0]?.id;render();drawJourney();if(redesign&&result.journeys.length)$('new-search').open=false;if(result.walkingNotice)message(result.walkingNotice);
     const url=new URL(location.href);for(const field of ['origin','destination'])url.searchParams.set(field,JSON.stringify({name:selected[field].name,coord:selected[field].coord}));history.replaceState(null,'',url);
-    if(innerWidth<761)$('results').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});
+    if(innerWidth<761){if(redesign)window.scrollTo({top:0,behavior:'auto'});else $('results').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});}
     refreshTimer=setInterval(()=>{if(!document.hidden)refreshFeeds();},30000);
   }catch(error){if(generation===searchGeneration)$('results').innerHTML=`<div class="welcome"><h2>Couldn’t load journeys</h2><p>${escape(error.message)}. Please try again.</p></div>`;}
   finally{loading=false;$('search-button').disabled=false;$('search-button').innerHTML='Find journeys <span aria-hidden="true">→</span>';}
@@ -121,18 +123,19 @@ function routeChain(j){
   let bus=0;
   return j.legs.filter(l=>l.type==='bus'||l.minutes>0).map(l=>l.type==='bus'?'<span class="route-badge '+(bus++?'second':'')+'">'+escape(l.number)+'</span>':'<span>↗ '+l.minutes+' min</span>').join('<span aria-hidden="true">→</span>')||'<span>Walk · 0 min</span>';
 }
+function orderedJourneys(){return [...result.journeys].sort((a,b)=>sort==='walk'?a.walkMetres-b.walkMetres||a.minutes-b.minutes:sort==='changes'?a.transfers-b.transfers||a.minutes-b.minutes:(a.timing==='incomplete')-(b.timing==='incomplete')||a.minutes-b.minutes);}
 function render(){
   const liveOpen=document.querySelector('details.live-panel')?.open||false;
   const selectedButton=document.querySelector('.journey.selected [data-journey]');
   const openDisclosures=selectedButton?.dataset.journey===activeId?[...document.querySelectorAll('.journey.selected details')].map(d=>d.open):[];
   if(!result?.journeys.length){$('results').innerHTML=`<div class="welcome"><h2>No journey found</h2><p>${escape(result?.reason)}</p><p class="small">Try a named stop or move the pin to a nearby public street.</p></div>`;journeyLayer.clearLayers();drawPoints();return;}
-  const ordered=[...result.journeys].sort((a,b)=>sort==='walk'?a.walkMetres-b.walkMetres:sort==='changes'?a.transfers-b.transfers||a.minutes-b.minutes:(a.timing==='incomplete')-(b.timing==='incomplete')||a.minutes-b.minutes);
-  $('results').innerHTML=`<div class="results-heading"><h2>${result.journeys.length} journey options</h2><button class="share-button" id="share-journey" aria-label="Copy journey link">Share</button></div><p class="timing-note">Approximate times · Maldives time</p><div class="sorts"><button data-sort="arrival" class="${sort==='arrival'?'selected':''}">Fastest</button><button data-sort="changes" class="${sort==='changes'?'selected':''}">Fewer changes</button><button data-sort="walk" class="${sort==='walk'?'selected':''}">Less walking</button></div>${ordered.map(j=>{
+  const ordered=orderedJourneys();
+  $('results').innerHTML=redesign?newResults(ordered,activeId,sort,{escape,time,routeChain}):`<div class="results-heading"><h2>${result.journeys.length} journey options</h2><button class="share-button" id="share-journey" aria-label="Copy journey link">Share</button></div><p class="timing-note">Approximate times · Maldives time</p><div class="sorts"><button data-sort="arrival" class="${sort==='arrival'?'selected':''}">Fastest</button><button data-sort="changes" class="${sort==='changes'?'selected':''}">Fewer changes</button><button data-sort="walk" class="${sort==='walk'?'selected':''}">Less walking</button></div>${ordered.map(j=>{
     const active=j.id===activeId,buses=j.legs.filter(l=>l.type==='bus');
     return `<article class="journey ${active?'selected':''}"><button class="journey-head" data-journey="${escape(j.id)}" aria-expanded="${active}"><span class="journey-label">${escape(j.timing==='incomplete'?'Waiting time extra':(j.labels[0]==='Earliest estimate'?'Fastest':j.labels[0]))}</span><span class="journey-top"><span class="duration">${j.minutes}<small>${j.timing==='incomplete'?'min + wait':'min approx.'}</small></span><span class="arrival">${j.arrival?'Arrive ~'+time(j.arrival):'Bus wait extra'}</span></span><span class="route-chain">${routeChain(j)}</span><span class="meta"><span>${buses.length?(j.transfers?j.transfers+' change':'Direct bus'):'Walk only'}${j.walkMetres?' · '+distance(j.walkMetres)+' walking':''}</span><span>${j.fare===null?'Confirm fare':'MVR '+j.fare}</span></span></button>${active?`<div class="details">${j.legs.map(legHtml).join('')}<button class="primary start-journey" data-start="${escape(j.id)}">Start this journey →</button></div>`:''}</article>`;
   }).join('')}<details class="live-panel"><summary>Live bus updates</summary><div class="live-title"><h2>Stop arrivals & vehicles</h2><button id="refresh-feed">Refresh</button></div><p class="feed-summary">Refreshes every 30 seconds. Retrieval time is not the vehicle’s GPS-fix time.</p><div id="feed-content"></div><p class="small">Bus dots show fetched positions, not confirmed direction. Use the stop arrival and route instructions to choose a bus.</p></details>`;
   document.querySelectorAll('[data-journey]').forEach(b=>b.onclick=()=>{activeId=b.dataset.journey;feedGeneration++;render();drawJourney();refreshFeeds();});
-  document.querySelectorAll('[data-sort]').forEach(b=>b.onclick=()=>{sort=b.dataset.sort;render();});
+  document.querySelectorAll('[data-sort]').forEach(b=>b.onclick=()=>{sort=b.dataset.sort;if(redesign)activeId=orderedJourneys()[0]?.id;render();if(redesign)drawJourney();});
   document.querySelectorAll('[data-start]').forEach(button=>button.onclick=async()=>{
     try{
       const old=loadSession(browserStore);
@@ -141,7 +144,7 @@ function render(){
       button.disabled=true;
       await enableGuidanceDevices();
       try{const registration=await navigator.serviceWorker?.getRegistration();const notifications=await registration?.getNotifications();notifications?.filter(n=>n.data?.session===old?.id).forEach(n=>n.close());}catch{}
-      location.href='/journey.html';
+      location.href=journeyUrl;
     }catch(error){message(error.message||'Couldn’t save this journey. Enable site storage and try again.');}
   });
   $('refresh-feed').onclick=refreshFeeds;renderFeeds();
@@ -154,7 +157,7 @@ function drawJourney(){
   journeyLayer.clearLayers();vehicleLayer.clearLayers();drawPoints();const journey=current();if(!journey)return;
   let busIndex=0,points=[];
   for(const leg of journey.legs){const coords=leg.coords.map(p=>[p[1],p[0]]);points.push(...coords);
-    L.polyline(coords,{color:leg.type==='walk'?'#687585':busIndex++?'#337e79':'#585b9d',weight:leg.type==='walk'?4:6,opacity:.95,dashArray:leg.type==='walk'?'3 8':null}).addTo(journeyLayer);
+    L.polyline(coords,{color:leg.type==='walk'?(redesign?'#b77a2b':'#687585'):busIndex++?(redesign?'#e1a345':'#337e79'):(redesign?'#176f82':'#585b9d'),weight:leg.type==='walk'?4:6,opacity:.95,dashArray:leg.type==='walk'?'3 8':null}).addTo(journeyLayer);
     if(leg.type==='bus')for(const c of [coords[0],coords.at(-1)])L.circleMarker(c,{radius:5,color:'#585b9d',fillColor:'white',fillOpacity:1,weight:2}).addTo(journeyLayer);
   }
   if(points.length){bounds=L.latLngBounds(points);map.fitBounds(bounds,{padding:[45,55],maxZoom:16});}renderFeeds();
@@ -183,7 +186,7 @@ async function refreshFeeds(){
   try{
     const updated=await request('/api/plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({origin:result.origin,destination:result.destination,mapProvider:mapSetup.provider,walkingSession:result.walkingSession})});
     if(generation!==feedGeneration)return;
-    const oldId=activeId;result=updated;if(!result.journeys.some(j=>j.id===activeId))activeId=result.journeys[0]?.id;
+    const oldId=activeId;result=updated;if(!result.journeys.some(j=>j.id===activeId))activeId=(redesign?orderedJourneys():result.journeys)[0]?.id;
     render();if(oldId!==activeId)drawJourney();
   }catch{if(generation===feedGeneration)message('Couldn’t refresh. The shown options are from the last successful check. Find journeys to retry.');}
   if($('refresh-feed')){$('refresh-feed').disabled=false;$('refresh-feed').textContent='Refresh';}
@@ -192,8 +195,8 @@ setInterval(()=>{if(result){renderFeeds();if(Date.now()-Date.parse(result.comput
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&result)refreshFeeds();});
 try {
   const saved=loadSession(browserStore);
-  if(saved&&saved.status!=='completed'){
-    const link=document.createElement('a');link.href='/journey.html';link.className='resume-journey';link.textContent='Resume your journey →';document.querySelector('.planner').prepend(link);
+  if(saved&&saved.status!=='completed'&&!redesign){
+    const link=document.createElement('a');link.href=journeyUrl;link.className='resume-journey';link.textContent='Resume your journey →';document.querySelector('.planner').prepend(link);
   }
   data=await request('/api/bootstrap');
   locateUser(false);
