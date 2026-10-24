@@ -41,7 +41,7 @@ async function notify(event){
   if(!session||!isCurrentSession(browserStore,session.id))return;
   alertText(event.title+' · '+event.body);
   navigator.vibrate?.([160,80,160]);
-  if(registration&&globalThis.Notification?.permission==='granted')try{await registration.showNotification(event.title,{body:event.body,icon:'/icon.svg',tag:'hingaa:'+session.id+':'+event.key,data:{session:session.id,path:'/journey.html'}});}catch{alertText(event.title+' · '+event.body+' (Device notifications unavailable.)');}
+  if(registration&&globalThis.Notification?.permission==='granted')try{await registration.showNotification(event.title,{body:event.body,icon:'/icon-192.png',tag:'hingaa:'+session.id+':'+event.key,data:{session:session.id,path:'/journey.html'}});}catch{alertText(event.title+' · '+event.body+' (Device notifications unavailable.)');}
 }
 function gotPosition(position){
   if(!session||lease()?.owner!==owner||!isCurrentSession(browserStore,session.id)){stopTracking();render();return;}
