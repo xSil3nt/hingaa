@@ -1,8 +1,8 @@
-import {mapPalette,mapStyles} from './map-theme.js';
+import {mapPalette,darkMapPalette,mapStyles} from './map-theme.js';
 import {mapRegion,mapZoom} from './map-region.js';
 export async function mapLibrary(key,theme){
-  const palette=theme==='new'?{...mapPalette,water:'#aed1db',bus:'#176f82',transfer:'#bf8a37'}:mapPalette;
-  const styles=zoom=>[...mapStyles(zoom),...(theme==='new'?[{featureType:'water',elementType:'geometry',stylers:[{color:palette.water}]}]:[])];
+  const palette=theme==='new'?darkMapPalette:mapPalette;
+  const styles=zoom=>mapStyles(zoom,palette);
   if(!key)return {library:window.L,provider:'osm'};
   try{
     await new Promise((resolve,reject)=>{
@@ -35,7 +35,7 @@ export async function mapLibrary(key,theme){
       control:{zoom:()=>noop},tileLayer:()=>noop,layerGroup:()=>new Group(),divIcon:options=>options,
       latLngBounds(points){const b=new g.LatLngBounds();points.forEach(p=>b.extend(latlng(p)));return b;},
       marker(p,options){const el=document.createElement('div');el.innerHTML=options?.icon?.html||'';const isBus=!!el.querySelector('.bus-marker'),dest=!!el.querySelector('.destination');
-        return wrap(new g.Marker({position:latlng(p),label:{text:el.textContent||'',color:isBus?'#513c11':'white',fontSize:isBus?'10px':'12px',fontWeight:'700'},icon:{path:isBus?'M -14,-10 L 14,-10 Q 17,-10 17,-7 L 17,7 Q 17,10 14,10 L -14,10 Q -17,10 -17,7 L -17,-7 Q -17,-10 -14,-10 Z':g.SymbolPath.CIRCLE,scale:isBus?1:15,fillColor:isBus?palette.vehicle:dest?palette.transfer:palette.bus,fillOpacity:1,strokeColor:isBus?'#8c681b':'white',strokeWeight:isBus?1.5:3},zIndex:isBus?5:10}));},
+        return wrap(new g.Marker({position:latlng(p),label:{text:el.textContent||'',color:isBus?'#513c11':theme==='new'?'#0b2730':'white',fontSize:isBus?'10px':'12px',fontWeight:'700'},icon:{path:isBus?'M -14,-10 L 14,-10 Q 17,-10 17,-7 L 17,7 Q 17,10 14,10 L -14,10 Q -17,10 -17,7 L -17,-7 Q -17,-10 -14,-10 Z':g.SymbolPath.CIRCLE,scale:isBus?1:15,fillColor:isBus?palette.vehicle:dest?palette.transfer:palette.bus,fillOpacity:1,strokeColor:isBus?'#8c681b':'white',strokeWeight:isBus?1.5:3},zIndex:isBus?5:10}));},
       circleMarker(p,options){return wrap(new g.Marker({position:latlng(p),icon:{path:g.SymbolPath.CIRCLE,scale:options.radius,fillColor:options.fillColor,fillOpacity:1,strokeColor:options.color,strokeWeight:2}}));},
       polyline(coords,options){if(options.interactive===false)return noop;const path=coords.map(latlng);return wrap(new g.Polyline({path,strokeColor:options.color,strokeWeight:options.weight,strokeOpacity:options.dashArray?0:options.opacity,icons:options.dashArray?[{icon:{path:'M 0,-1 0,1',strokeOpacity:1,scale:2},offset:'0',repeat:'10px'}]:[]}));}
     };

@@ -10,7 +10,7 @@ const escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>'
 const time=ms=>new Intl.DateTimeFormat('en-GB',{timeZone:'Indian/Maldives',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(ms));
 const date=ms=>new Intl.DateTimeFormat('en-GB',{timeZone:'Indian/Maldives',day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}).format(new Date(ms));
 const distance=m=>m>=1000?(m/1000).toFixed(1)+' km':m+' m';
-let data,selected={origin:null,destination:null},result=null,activeId=null,pinField=null,sort=redesign?'walk':'arrival',loading=false;
+let data,selected={origin:null,destination:null},result=null,activeId=null,pinField=null,sort='arrival',loading=false;
 let searchGeneration=0,feedGeneration=0,pendingPlaces=0;
 const config=await fetch('/api/config').then(r=>r.json()).catch(()=>({}));
 const mapSetup=await mapLibrary(config.browserKey,redesign?'new':undefined),L=mapSetup.library;
@@ -162,8 +162,8 @@ function drawJourney(){
   journeyLayer.clearLayers();vehicleLayer.clearLayers();drawPoints();const journey=current();if(!journey)return;
   let busIndex=0,points=[];
   for(const leg of journey.legs){const coords=leg.coords.map(p=>[p[1],p[0]]);points.push(...coords);
-    L.polyline(coords,{color:leg.type==='walk'?(redesign?'#b77a2b':'#687585'):busIndex++?(redesign?'#e1a345':'#337e79'):(redesign?'#176f82':'#585b9d'),weight:leg.type==='walk'?4:6,opacity:.95,dashArray:leg.type==='walk'?'3 8':null}).addTo(journeyLayer);
-    if(leg.type==='bus')for(const c of [coords[0],coords.at(-1)])L.circleMarker(c,{radius:5,color:'#585b9d',fillColor:'white',fillOpacity:1,weight:2}).addTo(journeyLayer);
+    L.polyline(coords,{color:leg.type==='walk'?(redesign?'#e1a345':'#687585'):busIndex++?(redesign?'#e1a345':'#337e79'):(redesign?'#38c3df':'#585b9d'),weight:leg.type==='walk'?4:6,opacity:.95,dashArray:leg.type==='walk'?'3 8':null}).addTo(journeyLayer);
+    if(leg.type==='bus')for(const c of [coords[0],coords.at(-1)])L.circleMarker(c,{radius:5,color:redesign?'#38c3df':'#585b9d',fillColor:redesign?'#172730':'white',fillOpacity:1,weight:2}).addTo(journeyLayer);
   }
   if(points.length){bounds=L.latLngBounds(points);map.fitBounds(bounds,{padding:[45,55],maxZoom:16});}renderFeeds();
 }
@@ -208,7 +208,7 @@ try {
   data=await request('/api/bootstrap');
   locateUser(false);
   // Local street context remains visible when online map tiles are unavailable.
-  L.polyline(data.streets.map(edge=>edge.map(p=>[p[1],p[0]])),{color:'#adc1b8',weight:1,opacity:.35,interactive:false}).addTo(streetLayer);
+  L.polyline(data.streets.map(edge=>edge.map(p=>[p[1],p[0]])),{color:redesign?'#46535c':'#adc1b8',weight:1,opacity:.35,interactive:false}).addTo(streetLayer);
   const query=new URL(location.href).searchParams;let shared=0;
   for(const [field,id] of [['origin','103'],['destination','401']]){
     let place=data.places.find(p=>p.id===id);
