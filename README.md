@@ -32,4 +32,4 @@ Step-by-step instructions to get users to their destinations, while accomodating
 
 # AI Tools declaration
 
-AI tools were used in the making of this. They include OpenAI ChatGPT & Cursor Autocomplete
+AI tools were used in the making of this. They include ChatGPT, Claude & Cursor.
