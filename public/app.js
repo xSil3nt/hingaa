@@ -85,7 +85,6 @@ function locateUser(updateOrigin=true){
   },error=>{userLocation.clear();if(updateOrigin)message(error.code===1?'Enable location access to see yourself on the map.':'Waiting for GPS. You can still search a stop.');if(error.code===1){navigator.geolocation.clearWatch(locationWatch);locationWatch=null;userLocation.disableCompass();}},{enableHighAccuracy:true,timeout:15000,maximumAge:3000});
 };
 $('locate').onclick=()=>locateUser(true);
-$('map-locate').onclick=()=>{const f=userLocation.fix;if(f&&Date.now()-f.timestamp<30000){userLocation.enableCompass();map.setView([f.latitude,f.longitude],17);}else $('locate').click();};
 window.addEventListener('pagehide',()=>{if(locationWatch!==null)navigator.geolocation.clearWatch(locationWatch);userLocation.disableCompass();});
 setInterval(()=>{if(lastLocationAt&&Date.now()-lastLocationAt>30000)userLocation.clear();},5000);
 async function request(url,options={}){
@@ -194,7 +193,7 @@ try {
     const link=document.createElement('a');link.href='/journey.html';link.className='resume-journey';link.textContent='Resume your journey →';document.querySelector('.planner').prepend(link);
   }
   data=await request('/api/bootstrap');
-  navigator.permissions?.query({name:'geolocation'}).then(permission=>{if(permission.state==='granted'&&locationWatch===null)locateUser(false);}).catch(()=>{});
+  locateUser(false);
   // Local street context remains visible when online map tiles are unavailable.
   L.polyline(data.streets.map(edge=>edge.map(p=>[p[1],p[0]])),{color:'#adc1b8',weight:1,opacity:.35,interactive:false}).addTo(streetLayer);
   const query=new URL(location.href).searchParams;let shared=0;

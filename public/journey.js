@@ -12,7 +12,7 @@ function release(){if(lease()?.owner===owner)browserStore.removeItem(LEASE_KEY);
 function persist(){if(!session||!isCurrentSession(browserStore,session.id)){stopTracking();return;}try{saveSession(browserStore,session);}catch(error){$('storage-warning').hidden=false;$('storage-warning').textContent=error.message+' Keep this page open.';}}
 async function awake(){try{if(document.visibilityState==='visible'&&watch!==null&&navigator.wakeLock)wake=await navigator.wakeLock.request('screen');}catch{}}
 function stopTracking(){locationDot.disableCompass();locationDot.clear();if(watch!==null)navigator.geolocation?.clearWatch(watch);watch=null;wake?.release().catch(()=>{});wake=null;release();}
-function hideFinishedTools(){for(const selector of ['#map-locate','.session-tools','.tracking-note','#location-status','#feed-status','.session-panel>details'])document.querySelector(selector)?.setAttribute('hidden','');}
+function hideFinishedTools(){for(const selector of ['.session-tools','.tracking-note','#location-status','#feed-status','.session-panel>details'])document.querySelector(selector)?.setAttribute('hidden','');}
 function render(){
   if(!session){hideFinishedTools();routeLayer?.clearLayers();userLayer?.clearLayers();$('instruction').innerHTML='<h1>No active journey</h1><p>Choose a route to start.</p><a class="primary" href="/">Find a journey</a>';$('session-status').textContent='Ready when you are';$('tracking').hidden=true;$('confirm').hidden=true;$('end').hidden=true;return;}
   if(session.status==='completed'){
@@ -56,7 +56,7 @@ function startTracking(){
   if(!session||session.status==='completed')return;
   if(!navigator.geolocation){alertText('Location is unavailable. Use the step buttons to guide yourself.');return;}
   if(!claim())return;
-  locationDot.enableCompass();
+  if(typeof globalThis.DeviceOrientationEvent?.requestPermission!=='function')locationDot.enableCompass();
   session.status='active';session.startedAt=Date.now();tracker=new ProgressTracker();trackingMessage='Finding your location…';persist();
   watch=navigator.geolocation.watchPosition(gotPosition,error=>{
     trackingMessage=error.code===1?'Location access is off. Use manual steps or enable location in your browser.':'Location is unavailable. Waiting for GPS; manual steps still work.';
@@ -68,8 +68,8 @@ function startTracking(){
 async function closeNotifications(id=session?.id){try{const r=registration||await navigator.serviceWorker?.getRegistration();const list=await r?.getNotifications();list?.filter(n=>n.data?.session===id).forEach(n=>n.close());}catch{}}
 $('tracking').onclick=()=>{if(watch!==null){stopTracking();session.status='paused';persist();trackingMessage='Guidance paused. Resume when you’re ready.';render();}else startTracking();};
 $('confirm').onclick=()=>{if(!session)return;if(!claim())return;const previous=session.index;confirmStep(session);remaining=null;tracker=new ProgressTracker();persist();alertText('');render();if(previous!==session.index)drawRoute();if(watch===null)release();};
-$('follow').onclick=()=>{follow=true;if(watch===null){startTracking();return;}if(lastFix&&map)map.setView([lastFix.coord[1],lastFix.coord[0]],16);};
-$('map-locate').onclick=()=>{if(watch!==null)locationDot.enableCompass();$('follow').click();};
+$('compass').hidden=typeof globalThis.DeviceOrientationEvent?.requestPermission!=='function';
+$('compass').onclick=async()=>{if(await locationDot.enableCompass())$('compass').hidden=true;};
 $('notifications').onclick=async()=>{
   if(!('Notification' in window)||!('serviceWorker' in navigator)){alertText('Device notifications aren’t available here. In-app stop alerts still work. On iPhone, try adding hingaa to your Home Screen.');return;}
   try{const permission=await Notification.requestPermission();if(permission!=='granted'){alertText('Device notifications are off. In-app alerts still work.');return;}registration=await navigator.serviceWorker.register('/sw.js');registration=await navigator.serviceWorker.ready;$('notifications').textContent='Notifications enabled';}catch{alertText('Notifications couldn’t be enabled. In-app alerts still work.');}
@@ -97,4 +97,5 @@ render();
 if(session)try{
   const config=await(await fetch('/api/config',{signal:AbortSignal.timeout(10000)})).json();const setup=await mapLibrary(config.browserKey);L=setup.library;map=L.map('map').setView([4.202,73.527],13);locationDot.attach(map,L);L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap contributors'}).addTo(map);routeLayer=L.layerGroup().addTo(map);userLayer=L.layerGroup().addTo(map);map.on('dragstart',()=>{follow=false;});drawRoute();refreshFeed();
 }catch{alertText('Map unavailable. Your journey instructions are still here.');}
+if(session&&session.status!=='completed')startTracking();
 if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').then(r=>{registration=r;if(globalThis.Notification?.permission==='granted')$('notifications').textContent='Notifications enabled';}).catch(()=>{});
