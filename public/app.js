@@ -142,8 +142,8 @@ function drawJourney(){
   journeyLayer.clearLayers();vehicleLayer.clearLayers();drawPoints();const journey=current();if(!journey)return;
   let busIndex=0,points=[];
   for(const leg of journey.legs){const coords=leg.coords.map(p=>[p[1],p[0]]);points.push(...coords);
-    L.polyline(coords,{color:leg.type==='walk'?'#687585':busIndex++?'#177d70':'#48599f',weight:leg.type==='walk'?4:6,opacity:.95,dashArray:leg.type==='walk'?'3 8':null}).addTo(journeyLayer);
-    if(leg.type==='bus')for(const c of [coords[0],coords.at(-1)])L.circleMarker(c,{radius:5,color:'#48599f',fillColor:'white',fillOpacity:1,weight:2}).addTo(journeyLayer);
+    L.polyline(coords,{color:leg.type==='walk'?'#687585':busIndex++?'#337e79':'#585b9d',weight:leg.type==='walk'?4:6,opacity:.95,dashArray:leg.type==='walk'?'3 8':null}).addTo(journeyLayer);
+    if(leg.type==='bus')for(const c of [coords[0],coords.at(-1)])L.circleMarker(c,{radius:5,color:'#585b9d',fillColor:'white',fillOpacity:1,weight:2}).addTo(journeyLayer);
   }
   if(points.length){bounds=L.latLngBounds(points);map.fitBounds(bounds,{padding:[45,55],maxZoom:16});}renderFeeds();
 }

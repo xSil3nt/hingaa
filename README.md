@@ -116,3 +116,7 @@ Automated session fixtures cover transfers, pause/restore/expiry, permission-ind
 ### Transit-focused map update
 
 The base map now uses charcoal water, cream islands and mint parks, with locality labels at overview scale and street names only at zoom 16 and above. Highway colors, business icons, transit labels and native camera controls are suppressed through Google Maps style/options. Custom accessible zoom buttons replace the camera widget. Google's logo, copyright, terms and keyboard controls remain visible. The planner initially fits the two selected endpoints instead of opening on a broad ocean extent. Styling is shared with active journey guidance.
+
+### Selected palette
+
+Lilac Coast is the sole active palette: lavender water (`#e0e2f5`), chalk land (`#faf8f0`), indigo primary routes (`#585b9d`) and teal secondary routes (`#337e79`). The app controls, icon, planner map and journey map use this palette. Street names appear at zoom 16 and above. The temporary local color laboratory and its alternative presets have been removed.

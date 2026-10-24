@@ -29,7 +29,7 @@ function render(){
   $('location-status').textContent=trackingMessage;
 }
 function drawRoute(){if(!map||!session)return;routeLayer.clearLayers();const leg=session.legs[session.index];if(!leg)return;
-  L.polyline(leg.coords.map(p=>[p[1],p[0]]),{color:leg.type==='walk'?'#62667c':'#48599f',weight:6,opacity:.95,dashArray:leg.type==='walk'?'3 8':null}).addTo(routeLayer);
+  L.polyline(leg.coords.map(p=>[p[1],p[0]]),{color:leg.type==='walk'?'#62667c':'#585b9d',weight:6,opacity:.95,dashArray:leg.type==='walk'?'3 8':null}).addTo(routeLayer);
   for(const p of [leg.coords[0],leg.coords.at(-1)])L.circleMarker([p[1],p[0]],{radius:7,color:'#505b94',fillColor:'#fff',fillOpacity:1}).addTo(routeLayer);
   map.fitBounds(L.latLngBounds(leg.coords.map(p=>[p[1],p[0]])),{maxZoom:16});
 }
