@@ -24,6 +24,7 @@ function resetPlan(){
   if(!result&&!loading)return;
   searchGeneration++;feedGeneration++;clearInterval(refreshTimer);result=null;activeId=null;bounds=null;journeyLayer.clearLayers();vehicleLayer.clearLayers();
   $('results').replaceChildren();
+  if(redesign)$('trip-title').textContent='Where to?';
 }
 function setPlace(field,place){if(JSON.stringify(selected[field]?.coord)!==JSON.stringify(place?.coord))resetPlan();selected[field]=place;$(field).value=place?.name||'';closeOptions(field);drawPoints();
   const box=$('place-attribution');if(box)box.innerHTML=Object.values(selected).flatMap(p=>p?.attributions||[]).map(a=>{let url='';try{const u=new URL(a.providerUri);if(['http:','https:'].includes(u.protocol))url=u.href;}catch{}return url?`<a href="${escape(url)}" target="_blank" rel="noreferrer">${escape(a.provider||'Place attribution')}</a>`:escape(a.provider||'');}).join(' · ');
@@ -126,6 +127,8 @@ function routeChain(j){
 function orderedJourneys(){return [...result.journeys].sort((a,b)=>sort==='walk'?a.walkMetres-b.walkMetres||a.minutes-b.minutes:sort==='changes'?a.transfers-b.transfers||a.minutes-b.minutes:(a.timing==='incomplete')-(b.timing==='incomplete')||a.minutes-b.minutes);}
 function render(){
   const liveOpen=document.querySelector('details.live-panel')?.open||false;
+  const alternativesOpen=document.querySelector('.new-alternatives')?.open||false;
+  if(redesign)$('trip-title').textContent=result?.destination?.name?'To '+result.destination.name:'Where to?';
   const selectedButton=document.querySelector('.journey.selected [data-journey]');
   const openDisclosures=selectedButton?.dataset.journey===activeId?[...document.querySelectorAll('.journey.selected details')].map(d=>d.open):[];
   if(!result?.journeys.length){$('results').innerHTML=`<div class="welcome"><h2>No journey found</h2><p>${escape(result?.reason)}</p><p class="small">Try a named stop or move the pin to a nearby public street.</p></div>`;journeyLayer.clearLayers();drawPoints();return;}
@@ -149,6 +152,7 @@ function render(){
   });
   $('refresh-feed').onclick=refreshFeeds;renderFeeds();
   document.querySelector('details.live-panel').open=liveOpen;
+  const alternatives=document.querySelector('.new-alternatives');if(alternatives)alternatives.open=alternativesOpen;
   $('share-journey').onclick=async()=>{try{await navigator.clipboard.writeText(location.href);$('share-journey').textContent='Copied';setTimeout(()=>{if($('share-journey'))$('share-journey').textContent='Share';},2000);}catch{message('Copy the address from your browser to share this journey.');}};
   document.querySelectorAll('.journey.selected details').forEach((d,i)=>{d.open=!!openDisclosures[i];});
 }
