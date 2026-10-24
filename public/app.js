@@ -70,7 +70,7 @@ document.addEventListener('click',e=>{for(const field of ['origin','destination'
 function drawPoints(){pointLayer.clearLayers();for(const [field,p] of Object.entries(selected))if(p){L.marker([p.coord[1],p.coord[0]],{icon:L.divIcon({className:'',html:`<div class="endpoint-marker ${field}">${field==='origin'?'A':'B'}</div>`,iconSize:[30,30],iconAnchor:[15,15]})}).addTo(pointLayer).bindTooltip(escape(p.name));}}
 $('swap').onclick=()=>{const o=selected.origin;setPlace('origin',selected.destination);setPlace('destination',o);message('Places swapped. Find journeys to update the route.');};
 document.querySelectorAll('.pin').forEach(b=>b.onclick=()=>{
-  pinField=b.dataset.field;$('pin-banner').hidden=false;$('pin-banner').firstChild.textContent=`Tap a location map to select. `;message('Choose a point on the map.');
+  pinField=b.dataset.field;$('pin-banner').hidden=false;$('pin-banner').firstChild.textContent=`Tap a location on the map to select it. `;message('Choose a point on the map.');
   if(innerWidth<761)$('map').scrollIntoView({behavior:'smooth',block:'center'});
 });
 $('cancel-pin').onclick=()=>{pinField=null;$('pin-banner').hidden=true;message('');};
