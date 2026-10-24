@@ -120,3 +120,9 @@ The base map now uses charcoal water, cream islands and mint parks, with localit
 ### Selected palette
 
 Lilac Coast is the sole active palette: lavender water (`#e0e2f5`), chalk land (`#faf8f0`), indigo primary routes (`#585b9d`) and teal secondary routes (`#337e79`). The app controls, icon, planner map and journey map use this palette. Street names appear at zoom 16 and above. The temporary local color laboratory and its alternative presets have been removed.
+
+## New journey replacement and user location
+
+Starting a new route automatically replaces the previous saved/active session, clears its tracking lease and closes its device notifications. An old journey tab stops tracking rather than adopting the new session. Guards prevent late GPS callbacks from writing old progress over the new session. Invalid replacements leave the previous session intact.
+
+The planner's location button now keeps a live blue marker and accuracy circle on the map without repeatedly resetting the selected origin. Journey guidance uses the same marker, with Locate me enabling tracking/recentering. A direction cone uses calibrated/absolute compass data when available, with device-orientation permission requested from the location/start button on supported browsers. Without compass data, GPS heading is used only while moving. No relative orientation or stationary GPS heading is presented as a facing direction. Sensor and live GPS delivery still need real-phone validation.

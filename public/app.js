@@ -1,4 +1,5 @@
-import {createSession,loadSession,saveSession,LEASE_KEY,browserStore} from './session-core.js';
+import {UserLocationMarker} from './location-marker.js';
+import {createSession,loadSession,replaceSession,browserStore} from './session-core.js';
 import {mapLibrary} from './google-map.js';
 const $=id=>document.getElementById(id);
 const escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -13,7 +14,8 @@ const map=L.map('map',{zoomControl:false}).setView([4.202,73.527],13);
 L.control.zoom({position:'topright'}).addTo(map);
 const tiles=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}).addTo(map);
 const streetLayer=L.layerGroup().addTo(map),journeyLayer=L.layerGroup().addTo(map),vehicleLayer=L.layerGroup().addTo(map),pointLayer=L.layerGroup().addTo(map);
-let bounds=null,refreshTimer=null;
+let bounds=null,refreshTimer=null,locationWatch=null,lastLocationAt=0;
+const userLocation=new UserLocationMarker().attach(map,L);
 function message(text){$('message').textContent=text;$('message').hidden=!text;}
 function resetPlan(){
   if(!result&&!loading)return;
@@ -72,11 +74,19 @@ $('cancel-pin').onclick=()=>{pinField=null;$('pin-banner').hidden=true;message('
 map.on('click',e=>{if(!pinField)return;const c=e.latlng;setPlace(pinField,{name:`Map pin (${c.lat.toFixed(4)}, ${c.lng.toFixed(4)})`,coord:[c.lng,c.lat],kind:'Map pin'});pinField=null;$('pin-banner').hidden=true;message('Pin set. Find journeys when both places are ready.');});
 $('locate').onclick=()=>{
   if(!navigator.geolocation){message('Location is unavailable. Search a stop or choose a map pin.');return;}
-  message('Finding your location…');navigator.geolocation.getCurrentPosition(p=>{
-    const coord=[p.coords.longitude,p.coords.latitude];if(coord[0]<73.47||coord[0]>73.57||coord[1]<4.145||coord[1]>4.265){message('Your location is outside Greater Malé. Choose a local place or map pin.');return;}
-    setPlace('origin',{name:'Current location',coord});map.setView([coord[1],coord[0]],16);message(`Location found (accuracy about ${Math.round(p.coords.accuracy)} m). Adjust the pin if needed.`);
-  },()=>message('Location wasn’t available. Search a place or use ⌖ to choose an origin on the map.'),{enableHighAccuracy:true,timeout:10000,maximumAge:60000});
+  userLocation.enableCompass();
+  if(locationWatch!==null)navigator.geolocation.clearWatch(locationWatch);
+  let first=true;message('Finding your location…');
+  locationWatch=navigator.geolocation.watchPosition(p=>{
+    const coord=[p.coords.longitude,p.coords.latitude];
+    if(coord[0]<73.47||coord[0]>73.57||coord[1]<4.145||coord[1]>4.265){message('Your location is outside Greater Malé. Choose a local place or map pin.');userLocation.clear();navigator.geolocation.clearWatch(locationWatch);locationWatch=null;return;}
+    lastLocationAt=p.timestamp;userLocation.update(p.coords,p.timestamp);
+    if(first){first=false;setPlace('origin',{name:'Current location',coord});map.setView([coord[1],coord[0]],17);if(innerWidth<761)$('map').scrollIntoView({block:'center',behavior:'auto'});message(p.coords.accuracy>60?'Location is approximate. Use the shaded circle to check accuracy.':'');}
+  },error=>{userLocation.clear();message(error.code===1?'Enable location access to see yourself on the map.':'Waiting for GPS. You can still search a stop.');if(error.code===1){navigator.geolocation.clearWatch(locationWatch);locationWatch=null;userLocation.disableCompass();}},{enableHighAccuracy:true,timeout:15000,maximumAge:3000});
 };
+$('map-locate').onclick=()=>{const f=userLocation.fix;if(f&&Date.now()-f.timestamp<30000){userLocation.enableCompass();map.setView([f.latitude,f.longitude],17);}else $('locate').click();};
+window.addEventListener('pagehide',()=>{if(locationWatch!==null)navigator.geolocation.clearWatch(locationWatch);userLocation.disableCompass();});
+setInterval(()=>{if(lastLocationAt&&Date.now()-lastLocationAt>30000)userLocation.clear();},5000);
 async function request(url,options={}){
   try{
     const res=await fetch(url,{...options,signal:options.signal||AbortSignal.timeout(55000)});
@@ -122,14 +132,13 @@ function render(){
   }).join('')}<details class="live-panel"><summary>Live bus updates</summary><div class="live-title"><h2>Stop arrivals & vehicles</h2><button id="refresh-feed">Refresh</button></div><p class="feed-summary">Refreshes every 30 seconds. Retrieval time is not the vehicle’s GPS-fix time.</p><div id="feed-content"></div><p class="small">Bus dots show fetched positions, not confirmed direction. Use the stop arrival and route instructions to choose a bus.</p></details>`;
   document.querySelectorAll('[data-journey]').forEach(b=>b.onclick=()=>{activeId=b.dataset.journey;feedGeneration++;render();drawJourney();refreshFeeds();});
   document.querySelectorAll('[data-sort]').forEach(b=>b.onclick=()=>{sort=b.dataset.sort;render();});
-  document.querySelectorAll('[data-start]').forEach(button=>button.onclick=()=>{
+  document.querySelectorAll('[data-start]').forEach(button=>button.onclick=async()=>{
     try{
-      const lease=JSON.parse(browserStore.getItem(LEASE_KEY)||'null');
-      if(lease&&lease.until>Date.now()){message('Pause or end your current journey before starting another.');return;}
       const old=loadSession(browserStore);
-      if(old&&old.status!=='completed'){message('You have a saved journey. Resume or end it before starting another.');return;}
       const chosen=result.journeys.find(j=>j.id===button.dataset.start);
-      saveSession(browserStore,createSession(chosen,result.origin,result.destination));location.href='/journey.html';
+      replaceSession(browserStore,createSession(chosen,result.origin,result.destination));
+      try{const registration=await navigator.serviceWorker?.getRegistration();const notifications=await registration?.getNotifications();notifications?.filter(n=>n.data?.session===old?.id).forEach(n=>n.close());}catch{}
+      location.href='/journey.html';
     }catch(error){message(error.message||'Couldn’t save this journey. Enable site storage and try again.');}
   });
   $('refresh-feed').onclick=refreshFeeds;renderFeeds();

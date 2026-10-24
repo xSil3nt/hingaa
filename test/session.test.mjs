@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createSession,validSession,loadSession,saveSession,confirmStep,ProgressTracker,SESSION_KEY,TTL} from '../public/session-core.js';
+import {createSession,validSession,loadSession,saveSession,confirmStep,ProgressTracker,SESSION_KEY,LEASE_KEY,replaceSession,isCurrentSession,TTL} from '../public/session-core.js';
 const a=[73.51,4.17],b=[73.512,4.17],c=[73.514,4.17],now=Date.now();
 const bus={type:'bus',number:'R1',from:'Start',to:'Finish',coords:[a,b,c],stopPoints:[{name:'Start',coord:a},{name:'Middle',coord:b},{name:'Finish',coord:c}],distance:444,minutes:5};
 const walk={type:'walk',to:'Start',coords:[[73.509,4.17],a],distance:111,minutes:2};
@@ -50,4 +50,22 @@ test('sudden GPS jumps and off-route points do not invent stop progress',()=>{
   const s=make([bus]);s.status='active';confirmStep(s);const t=new ProgressTracker();
   send(t,s,a,0);assert.equal(send(t,s,c,1000).quality,'jump');assert.equal(s.stopIndex,0);
   assert.equal(send(t,s,[73.51,4.174],15000).quality,'off-route');assert.equal(s.stopIndex,0);
+});
+
+
+test('starting a new journey replaces saved or active progress and releases the old tracking owner',()=>{
+  for(const status of ['paused','active']){
+    const storage=memory(),old=make([bus]);old.status=status;old.alerts=['0:prepare'];saveSession(storage,old);
+    storage.setItem(LEASE_KEY,JSON.stringify({owner:'old-tab',session:old.id,until:now+15000}));
+    const next=make([walk,bus]);replaceSession(storage,next);
+    assert.equal(loadSession(storage,now).id,next.id);assert.equal(storage.getItem(LEASE_KEY),null);
+    assert.equal(isCurrentSession(storage,old.id),false);assert.equal(isCurrentSession(storage,next.id),true);
+    assert.equal(loadSession(storage,now).index,0);assert.deepEqual(loadSession(storage,now).alerts,[]);
+  }
+});
+
+test('an invalid replacement preserves the existing journey and its tracking lease',()=>{
+  const storage=memory(),old=make([bus]);saveSession(storage,old);storage.setItem(LEASE_KEY,'old-owner');
+  assert.throws(()=>replaceSession(storage,{...old,expiresAt:0}));
+  assert.equal(loadSession(storage,now).id,old.id);assert.equal(storage.getItem(LEASE_KEY),'old-owner');
 });

@@ -19,6 +19,8 @@ export function loadSession(storage,now=Date.now()){
   try{const s=JSON.parse(storage.getItem(SESSION_KEY));if(validSession(s,now))return s;storage.removeItem(SESSION_KEY);}catch{}return null;
 }
 export function saveSession(storage,s){if(!validSession(s))throw Error('Journey session expired. Find a new journey.');storage.setItem(SESSION_KEY,JSON.stringify(s));}
+export function replaceSession(storage,s){saveSession(storage,s);storage.removeItem(LEASE_KEY);}
+export function isCurrentSession(storage,id){try{return JSON.parse(storage.getItem(SESSION_KEY))?.id===id;}catch{return false;}}
 export function advance(s){
   s.index++;s.stopIndex=0;s.progress=0;
   if(s.index>=s.legs.length){s.status='completed';s.phase='done';}
