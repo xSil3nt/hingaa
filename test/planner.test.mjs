@@ -74,6 +74,17 @@ test('an empty successful schedule cannot relabel saved timings as freshly publi
   const next=chooseDeparture(route,s,now+86400000+120000,empty,now+86400000,data.fetchedAtUtc);
   assert.equal(next.source,'unknown');
 });
+test('missing departures retain finite travel estimates without inventing arrival clocks or waits',()=>{
+  const next=planner.plan(stop('1007'),stop('401'),{},now+86400000);
+  assert.ok(next.journeys.length);
+  for(const j of next.journeys){
+    const buses=j.legs.filter(l=>l.type==='bus');
+    assert.equal(j.timing,'incomplete');assert.equal(j.arrival,null);
+    assert.ok(Number.isFinite(j.minutes)&&j.minutes>0);
+    assert.equal(j.minutes,j.legs.reduce((sum,l)=>sum+l.minutes,0)+buses.length*BUFFER);
+    assert.equal(j.unknownWaits,buses.length);
+  }
+});
 test('flat fares sum per boarding and distance fare cannot be calculated from base amount',()=>{
   const r=planner.plan(stop('1007'),stop('401'),{},now);for(const j of r.journeys)assert.equal(j.fare,j.legs.filter(l=>l.type==='bus').reduce((a,b)=>a+b.fare,0));
   const leg=planner.bus({...route,isDistanceFareType:1},0,1,now,{},now);assert.equal(leg.fare,null);

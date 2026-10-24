@@ -62,7 +62,10 @@ export const handler=async(req,res)=>{
           const shortlist=planner.plan(origin,destination,{},Date.now(),{walking:context});
           const pairs=new Map();
           for(const j of shortlist.journeys){const buses=j.legs.filter(l=>l.type==='bus');if(buses.length===2)pairs.set(buses[0].toCode+'>'+buses[1].fromCode,[buses[0].toCode,buses[1].fromCode]);}
-          for(const [key,[a,b]]of pairs){try{context.transfers.set(key,await google.walk(planner.stops.find(s=>s.code===a).coord,planner.stops.find(s=>s.code===b).coord,300));}catch{context.transfers.set(key,null);}}
+          const transferSignal=AbortSignal.timeout(10000),entries=[...pairs];
+          for(let i=0;i<entries.length;i+=4)await Promise.all(entries.slice(i,i+4).map(async([key,[a,b]])=>{
+            try{context.transfers.set(key,await google.walk(planner.stops.find(s=>s.code===a).coord,planner.stops.find(s=>s.code===b).coord,300,transferSignal));}catch{context.transfers.set(key,null);}
+          }));
           context.strictTransfers=true;sessionId=randomUUID();
           for(const [id,s]of walkingSessions)if(Date.now()-s.created>300000)walkingSessions.delete(id);
           if(walkingSessions.size>=16)walkingSessions.delete(walkingSessions.keys().next().value);

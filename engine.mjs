@@ -142,7 +142,8 @@ export class Planner {
       const buses=legs.filter(l=>l.type==='bus'),last=buses.at(-1),walk=legs.filter(l=>l.type==='walk').reduce((a,l)=>a+l.distance,0);
       const known=buses.every(l=>l.departure.source!=='unknown');
       const finish=(last?last.arrival:now)+(legs.at(-1).type==='walk'?legs.at(-1).minutes*60000:0);
-      raw.push({legs,transfers:Math.max(0,buses.length-1),walkMetres:walk,minutes:Math.ceil((finish-now)/60000),arrival:known?finish:null,
+      const travelMinutes=legs.reduce((sum,l)=>sum+l.minutes,0)+buses.length*BUFFER;
+      raw.push({legs,transfers:Math.max(0,buses.length-1),walkMetres:walk,travelMinutes,unknownWaits:buses.filter(l=>l.departure.source==='unknown').length,minutes:known?Math.ceil((finish-now)/60000):travelMinutes,arrival:known?finish:null,
         timing:known?'estimated':'incomplete',fare:buses.every(b=>b.fare!==null)?buses.reduce((a,b)=>a+b.fare,0):null,
         missed:buses.reduce((a,b)=>a+b.departure.missed,0),id:legs.filter(l=>l.type==='bus').map(l=>l.routeCode+':'+l.fromOrder+'-'+l.toOrder).join('/')||'walk'});
     };
@@ -166,7 +167,7 @@ export class Planner {
           const transfer=external?.transfers?.has(s.code+'>'+t.code)?external.transfers.get(s.code+'>'+t.code):external?.strictTransfers?null:this.walkBetween(s,t);if(!transfer)continue;
           const first=this.bus(a.r,a.i,x,now+(a.walk.minutes+BUFFER)*60000,feeds[a.r.code],now);if(!first)continue;
           const second=this.bus(b.r,y,b.j,first.arrival+(transfer.minutes+BUFFER)*60000,feeds[b.r.code],now);if(!second)continue;
-          if(first.departure.source==='unknown')second.departure.source='unknown';
+          if(first.departure.source==='unknown')second.departure={...second.departure,source:'unknown',checkedAt:null,vehicleCode:null,dependent:true};
           add([{...a.walk,to:first.from},first,{...transfer,to:second.from,transfer:true},second,{...b.walk,to:destination.name}]);
         }
       }

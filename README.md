@@ -90,3 +90,11 @@ Walking contexts and feed caches are per warm function instance. A different ins
 - `npm run deploy`: manual production deployment when needed.
 
 This folder is linked to the Vercel `hingaa` project via ignored `.vercel/` metadata. CLI version 65.2.0 is pinned in these commands. Pushes to GitHub `main` deploy automatically; check that deployment instead of creating a duplicate. Production Maps credentials are configured in Vercel. Local Maps development reads the ignored `.env.local`.
+
+## Reliable duration display and journey links
+
+Connected journeys always expose a finite travel duration. If a required departure is missing, the card shows `min + wait`: the sum of routed walks, modelled rides and two minutes per boarding. This excludes all bus waiting and does not invent an arrival clock or service frequency. Unsupported transfers do not inherit a promised departure. Outages and next-day expiry are covered by regression tests.
+
+Google walk selection retains the five closest stops and adds stops serving otherwise missing route patterns, up to ten at each end. Walking remains limited to 850 m. The walking phase has a shared 25-second deadline, transfer walks a shared 10-second deadline, with upstream calls at most four at a time. Failed routing falls back to the local path graph when usable.
+
+Successful searches put the endpoints in the page URL. Share copies that link; opening it restores the endpoints and finds current journeys. These URLs contain the selected coordinates, so share location links intentionally. Search results scroll into view on phones, respect reduced motion, and omit zero-minute walk segments from the summary.

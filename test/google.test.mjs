@@ -55,3 +55,11 @@ test('Google walking time controls catchability before bus selection',()=>{
   const feeds={'133':{eta:{ok:true,fetchedAtUtc:new Date(now).toISOString(),data:{inboundStopsETAList:rows,outboundStopsETAList:null}}}};
   const result=p.plan(origin,destination,feeds,now,{walking:context});assert.equal(result.journeys[0].legs.find(l=>l.type==='bus').departure.vehicleCode,'CATCHABLE');assert.equal(result.journeys[0].legs[0].provider,'google');
 });
+test('a route missed by the five nearest stops is included without unbounded walking calls',async()=>{
+  const stops=Array.from({length:14},(_,i)=>({code:String(i),coord:[73.54+i*.0001,4.22]}));
+  const routes=[{code:'A',stops:stops.slice(0,5).map(s=>({...s,board:true,alight:true}))},{code:'B',stops:[{...stops[7],board:true,alight:true}]}];
+  const google={walk:async(a,b)=>({type:'walk',minutes:2,distance:100,coords:[a,b],streets:[]})};
+  const context=await googleWalkContext({stops,routes},google,{coord:stops[0].coord},{coord:stops[0].coord});
+  assert.ok(context.access.has('7'));assert.ok(context.egress.has('7'));
+  assert.ok(context.access.size<=10&&context.egress.size<=10);
+});

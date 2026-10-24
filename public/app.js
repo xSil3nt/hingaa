@@ -76,39 +76,52 @@ $('locate').onclick=()=>{
     setPlace('origin',{name:'Current location',coord});map.setView([coord[1],coord[0]],16);message(`Location found (accuracy about ${Math.round(p.coords.accuracy)} m). Adjust the pin if needed.`);
   },()=>message('Location wasn’t available. Search a place or use ⌖ to choose an origin on the map.'),{enableHighAccuracy:true,timeout:10000,maximumAge:60000});
 };
-async function request(url,options){const res=await fetch(url,options);const body=await res.json();if(!res.ok)throw Error(body.error||'Request failed');return body;}
+async function request(url,options={}){
+  try{
+    const res=await fetch(url,{...options,signal:options.signal||AbortSignal.timeout(55000)});
+    if(!res.headers.get('content-type')?.includes('application/json'))throw Error('The service is busy. Please try again.');
+    const body=await res.json();if(!res.ok)throw Error(body.error||'Please try again.');return body;
+  }catch(error){if(error.name==='TimeoutError'||error.name==='AbortError')throw Error('The request took too long. Please try again.');if(error instanceof TypeError)throw Error('Check your connection and try again.');throw error;}
+}
 $('search-form').onsubmit=async e=>{
   e.preventDefault();if(loading)return;
   if(!selected.origin||!selected.destination){message('Select a matching place for both fields, or choose each one on the map.');return;}
   const generation=++searchGeneration;feedGeneration++;clearInterval(refreshTimer);vehicleLayer.clearLayers();
   loading=true;$('search-button').disabled=true;$('search-button').textContent='Finding journeys…';message('');
-  $('results').innerHTML='<div class="skeleton"><b>Finding your way</b><p>Checking paths, bus directions and stop arrivals…</p><div></div><div></div></div>';
+  $('results').innerHTML='<div class="skeleton"><b>Finding journeys…</b><p>Checking walks and bus arrivals.</p><div></div><div></div></div>';
   try {
     const next=await request('/api/plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...selected,mapProvider:mapSetup.provider})});
     if(generation!==searchGeneration)return;result=next;activeId=result.journeys[0]?.id;render();drawJourney();if(result.walkingNotice)message(result.walkingNotice);
+    const url=new URL(location.href);for(const field of ['origin','destination'])url.searchParams.set(field,JSON.stringify({name:selected[field].name,coord:selected[field].coord}));history.replaceState(null,'',url);
+    if(innerWidth<761)$('results').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});
     refreshTimer=setInterval(()=>{if(!document.hidden)refreshFeeds();},30000);
-  }catch(error){if(generation===searchGeneration)$('results').innerHTML=`<div class="welcome"><h2>Couldn’t load journeys</h2><p>${escape(error.message)}. Check the local server and try again.</p></div>`;}
+  }catch(error){if(generation===searchGeneration)$('results').innerHTML=`<div class="welcome"><h2>Couldn’t load journeys</h2><p>${escape(error.message)}. Please try again.</p></div>`;}
   finally{loading=false;$('search-button').disabled=false;$('search-button').innerHTML='Find journeys <span aria-hidden="true">→</span>';}
 };
-function timingLabel(dep){return dep.source==='live'?'Live stop estimate':dep.source==='published'?'Published upcoming time':dep.source==='saved'?'Saved upcoming time':'Departure unknown';}
+function timingLabel(dep){return dep.source==='live'?'Live stop estimate':dep.source==='published'?'Published upcoming time':dep.source==='saved'?'Saved upcoming time':'Wait time not included';}
 function legHtml(leg,index){
   if(leg.type==='walk'&&leg.distance===0)return `<div class="leg"><div class="leg-icon">○</div><div><h3>${leg.transfer?'Change buses at':'At'} ${escape(leg.to||result.destination.name)}</h3><p>No walk needed</p></div></div>`;
   if(leg.type==='walk')return `<div class="leg"><div class="leg-icon">↗</div><div><h3>${leg.transfer?'Change buses · walk':'Walk'} to ${escape(leg.to||result.destination.name)}</h3><p>${leg.minutes} min · ${distance(leg.distance)}${leg.streets.length?' · '+escape(leg.streets.join(' → ')):''}</p><p>${leg.provider==='google'?'Google Maps walking directions':'Local OpenStreetMap path · modelled walk'}</p>${leg.instructions?.length?`<details><summary>Walking directions</summary><ol>${leg.instructions.map(i=>`<li>${escape(i)}</li>`).join('')}</ol></details>`:''}${leg.warnings?.length?`<p>${escape(leg.warnings.join(' '))}</p>`:''}${leg.accessMetres>15?`<p>Includes ~${leg.accessMetres} m of approximate map access.</p>`:''}</div></div>`;
   const dep=leg.departure,unknown=dep.source==='unknown';
-  return `<div class="leg"><div class="leg-icon">▣</div><div><h3><span class="route-badge ${index>2?'second':''}">${escape(leg.number)}</span> Board at ${escape(leg.from)}</h3><p>${escape(leg.direction)}</p><p>${leg.minutes} min modelled ride · ${leg.stops} stops</p><span class="timing ${dep.source==='live'?'live':''}">${escape(timingLabel(dep))}${unknown?'':' · '+time(dep.departure)}</span>${dep.checkedAt?`<p>${dep.source==='saved'?'Snapshot':'Checked'} ${date(dep.checkedAt)} Maldives time</p>`:''}${dep.vehicleCode?`<p>Vehicle ${escape(dep.vehicleCode)} · RTL direction ${escape(dep.direction)}</p>`:''}<p>Be at the stop by ${unknown?'boarding time':time(dep.departure-120000)} · 2 min boarding buffer</p><details><summary>Alight at ${escape(leg.to)} · ${leg.stops} stops</summary><ol>${leg.stopNames.map(n=>`<li>${escape(n)}</li>`).join('')}</ol></details></div></div>`;
+  return `<div class="leg"><div class="leg-icon">▣</div><div><h3><span class="route-badge ${index>2?'second':''}">${escape(leg.number)}</span> Board at ${escape(leg.from)}</h3><p>${escape(leg.direction)}</p><p>${leg.minutes} min modelled ride · ${leg.stops} stops</p><span class="timing ${dep.source==='live'?'live':''}">${escape(timingLabel(dep))}${unknown?'':' · '+time(dep.departure)}</span>${dep.checkedAt?`<p>${dep.source==='saved'?'Snapshot':'Checked'} ${date(dep.checkedAt)} Maldives time</p>`:''}${dep.vehicleCode?`<p>Vehicle ${escape(dep.vehicleCode)} · RTL direction ${escape(dep.direction)}</p>`:''}${unknown?'<p>Travel duration excludes waiting for this bus.</p>':`<p>Be at the stop by ${time(dep.departure-120000)} · 2 min boarding buffer</p>`}<details><summary>Alight at ${escape(leg.to)} · ${leg.stops} stops</summary><ol>${leg.stopNames.map(n=>`<li>${escape(n)}</li>`).join('')}</ol></details></div></div>`;
+}
+function routeChain(j){
+  let bus=0;
+  return j.legs.filter(l=>l.type==='bus'||l.minutes>0).map(l=>l.type==='bus'?'<span class="route-badge '+(bus++?'second':'')+'">'+escape(l.number)+'</span>':'<span>↗ '+l.minutes+' min</span>').join('<span aria-hidden="true">→</span>')||'<span>Walk · 0 min</span>';
 }
 function render(){
   const selectedButton=document.querySelector('.journey.selected [data-journey]');
   const openDisclosures=selectedButton?.dataset.journey===activeId?[...document.querySelectorAll('.journey.selected details')].map(d=>d.open):[];
   if(!result?.journeys.length){$('results').innerHTML=`<div class="welcome"><h2>No journey found</h2><p>${escape(result?.reason)}</p><p class="small">Try a named stop or move the pin to a nearby public street.</p></div>`;journeyLayer.clearLayers();drawPoints();return;}
   const ordered=[...result.journeys].sort((a,b)=>sort==='walk'?a.walkMetres-b.walkMetres:sort==='changes'?a.transfers-b.transfers||a.minutes-b.minutes:(a.timing==='incomplete')-(b.timing==='incomplete')||a.minutes-b.minutes);
-  $('results').innerHTML=`<div class="results-heading"><h2>${result.journeys.length} journey options</h2><span>Leave now · ${time(result.computedAt)}</span></div><p class="timing-note">Totals use estimated walks and modelled bus rides. Every boarding allows 2 minutes. All times are Maldives time.</p><div class="sorts"><button data-sort="arrival" class="${sort==='arrival'?'selected':''}">Earliest estimate</button><button data-sort="changes" class="${sort==='changes'?'selected':''}">Fewer changes</button><button data-sort="walk" class="${sort==='walk'?'selected':''}">Less walking</button></div>${ordered.map(j=>{
+  $('results').innerHTML=`<div class="results-heading"><h2>${result.journeys.length} journey options</h2><span>Leave now · ${time(result.computedAt)}</span><button class="share-button" id="share-journey" aria-label="Copy journey link">Share</button></div><p class="timing-note">Walks and rides are estimates. Includes 2 minutes to board each bus. Times are Maldives time.</p><div class="sorts"><button data-sort="arrival" class="${sort==='arrival'?'selected':''}">Earliest estimate</button><button data-sort="changes" class="${sort==='changes'?'selected':''}">Fewer changes</button><button data-sort="walk" class="${sort==='walk'?'selected':''}">Less walking</button></div>${ordered.map(j=>{
     const active=j.id===activeId,buses=j.legs.filter(l=>l.type==='bus');
-    return `<article class="journey ${active?'selected':''}"><button class="journey-head" data-journey="${escape(j.id)}" aria-expanded="${active}"><span class="journey-label">${escape(j.timing==='incomplete'?'Route outline · next departure unknown':j.labels.join(' · '))}</span><span class="journey-top"><span class="duration">${j.timing==='incomplete'?'Time unknown':j.minutes+'<small>min approx.</small>'}</span><span class="arrival">${j.arrival?'Arrive ~'+time(j.arrival):'Check stop arrivals'}</span></span><span class="route-chain">↗ ${j.legs[0].minutes} min ${buses.length?'→':''} ${buses.map((b,i)=>`<span class="route-badge ${i?'second':''}">${escape(b.number)}</span>`).join('<span>→</span>')} ${buses.length?'→ ↗ '+j.legs.at(-1).minutes+' min':''}</span><span class="meta"><span>${buses.length?(j.transfers?j.transfers+' change':'Direct bus'):'Walk only'} · ${distance(j.walkMetres)} walking</span><span>${j.fare===null?'Confirm fare':'MVR '+j.fare}</span></span></button>${active?`<div class="details">${j.legs.map(legHtml).join('')}${j.missed?'<p class="caution">An approaching bus is too soon to catch with your walk and buffer. This option uses a later departure, or shows the next one as unknown.</p>':''}${j.transfers?'<p class="caution">Connection timing uses a modelled first ride. Allow extra time; the transfer is not guaranteed.</p>':''}${buses.length?'<p class="small">Walking times are estimates. Bus ride durations are modelled; traffic and stop dwell may change them.</p>':''}</div>`:''}</article>`;
+    return `<article class="journey ${active?'selected':''}"><button class="journey-head" data-journey="${escape(j.id)}" aria-expanded="${active}"><span class="journey-label">${escape(j.timing==='incomplete'?'Travel estimate · waiting extra':j.labels.join(' · '))}</span><span class="journey-top"><span class="duration">${j.minutes}<small>${j.timing==='incomplete'?'min + wait':'min approx.'}</small></span><span class="arrival">${j.arrival?'Arrive ~'+time(j.arrival):'Bus wait extra'}</span></span><span class="route-chain">${routeChain(j)}</span><span class="meta"><span>${buses.length?(j.transfers?j.transfers+' change':'Direct bus'):'Walk only'} · ${distance(j.walkMetres)} walking</span><span>${j.fare===null?'Confirm fare':'MVR '+j.fare}</span></span></button>${active?`<div class="details">${j.legs.map(legHtml).join('')}${j.missed?'<p class="caution">The approaching bus leaves before you can reach it. Allow time for the next service.</p>':''}${j.transfers?'<p class="caution">Allow extra time for the connection.</p>':''}${buses.length?'<p class="small">Walking times are estimates. Bus ride durations are modelled; traffic and stop dwell may change them.</p>':''}</div>`:''}</article>`;
   }).join('')}<section class="live-panel"><div class="live-title"><h2>Stop arrivals & vehicles</h2><button id="refresh-feed">Refresh</button></div><p class="feed-summary">Refreshes every 30 seconds. Retrieval time is not the vehicle’s GPS-fix time.</p><div id="feed-content"></div><p class="small">Bus dots show fetched positions, not confirmed direction. Use the stop arrival and route instructions to choose a bus.</p></section>`;
   document.querySelectorAll('[data-journey]').forEach(b=>b.onclick=()=>{activeId=b.dataset.journey;feedGeneration++;render();drawJourney();refreshFeeds();});
   document.querySelectorAll('[data-sort]').forEach(b=>b.onclick=()=>{sort=b.dataset.sort;render();});
   $('refresh-feed').onclick=refreshFeeds;renderFeeds();
+  $('share-journey').onclick=async()=>{try{await navigator.clipboard.writeText(location.href);$('share-journey').textContent='Copied';setTimeout(()=>{if($('share-journey'))$('share-journey').textContent='Share';},2000);}catch{message('Copy the address from your browser to share this journey.');}};
   document.querySelectorAll('.journey.selected details').forEach((d,i)=>{d.open=!!openDisclosures[i];});
 }
 function current(){return result?.journeys.find(j=>j.id===activeId);}
@@ -136,7 +149,7 @@ function renderFeeds(){
       marker.bindPopup(`${escape(bus.plateNumber||bus.busCode)}<br>Retrieved ${time(f.live.fetchedAtUtc)}<br>GPS-fix age and direction unknown.`);
     }
     const rows=etaFresh?['inboundStopsETAList','outboundStopsETAList'].flatMap(k=>f.eta.data?.[k]||[]).filter(r=>String(r.stopCode)===leg.fromCode):[];
-    return `<div class="feed-route"><b>${escape(leg.number)} · ${escape(leg.from)}</b>${rows.length?rows.slice(0,5).map(r=>`<div class="feed-row"><span><span class="live-dot"></span>${escape(r.eta)}<br><small>${escape(r.vehicleCode)} · direction ${escape(r.direction)} · ${escape(r.destination||'Destination unknown')}${liveFresh&&f.live.data?.busList?.some(b=>String(b.busCode)===String(r.vehicleCode))?' · position on map':''}</small></span></div>`).join(''):`<p class="feed-empty">${etaFresh?'No arrival estimate for this stop.':f.eta?.ok?'Arrival check is out of date. Refresh to check again.':'Arrival feed unavailable.'}</p>`}<p class="small">${etaFresh?'Arrivals checked '+time(f.eta.fetchedAtUtc)+'. ':''}${liveFresh?(f.live.data?.busList||[]).length+' vehicle positions checked '+time(f.live.fetchedAtUtc)+'.':f.live?.ok?'Vehicle check expired.':'Vehicle feed unavailable.'}</p>${!etaFresh?'<p class="small">Published / saved timing may still appear above, with its own label.</p>':''}</div>`;
+    return `<div class="feed-route"><b>${escape(leg.number)} · ${escape(leg.from)}</b>${rows.length?rows.slice(0,5).map(r=>`<div class="feed-row"><span><span class="live-dot"></span>${escape(r.eta)}<br><small>${escape(r.vehicleCode)} · direction ${escape(r.direction)} · ${escape(r.destination||'Destination unknown')}${liveFresh&&f.live.data?.busList?.some(b=>String(b.busCode)===String(r.vehicleCode))?' · position on map':''}</small></span></div>`).join(''):`<p class="feed-empty">${etaFresh?(leg.departure.source==='unknown'?'Waiting time is not included in the travel estimate.':'Using the departure time shown above.'):f.eta?.ok?'Arrival check is out of date. Refresh to check again.':'Arrival feed unavailable.'}</p>`}<p class="small">${etaFresh?'Arrivals checked '+time(f.eta.fetchedAtUtc)+'. ':''}${liveFresh?(f.live.data?.busList||[]).length+' vehicle positions checked '+time(f.live.fetchedAtUtc)+'.':f.live?.ok?'Vehicle check expired.':'Vehicle feed unavailable.'}</p>${!etaFresh?'<p class="small">Published / saved timing may still appear above, with its own label.</p>':''}</div>`;
   }).join(''):'<p class="small">No bus needed for this walking option.</p>';
 }
 async function refreshFeeds(){
@@ -156,7 +169,13 @@ try {
   data=await request('/api/bootstrap');
   // Local street context remains visible when online map tiles are unavailable.
   L.polyline(data.streets.map(edge=>edge.map(p=>[p[1],p[0]])),{color:'#adc1b8',weight:1,opacity:.35,interactive:false}).addTo(streetLayer);
-  setPlace('origin',data.places.find(p=>p.id==='103'));setPlace('destination',data.places.find(p=>p.id==='401'));
+  const query=new URL(location.href).searchParams;let shared=0;
+  for(const [field,id] of [['origin','103'],['destination','401']]){
+    let place=data.places.find(p=>p.id===id);
+    try{const p=JSON.parse(query.get(field));if(p&&typeof p.name==='string'&&p.name.length<200&&Array.isArray(p.coord)&&p.coord.length===2&&p.coord.every(Number.isFinite)&&p.coord[0]>73.47&&p.coord[0]<73.57&&p.coord[1]>4.145&&p.coord[1]<4.265){place=p;shared++;}}catch{}
+    setPlace(field,place);
+  }
+  if(shared===2)$('search-form').requestSubmit();
   if(mapSetup.error)message(mapSetup.error);
   document.querySelector('.map-caption').textContent=mapSetup.provider==='google'?'Google Maps · RTL buses':'Greater Malé · RTL bus network';
-}catch{message('The local server could not load the transport data. Reload after restarting the server.');$('search-button').disabled=true;}
+}catch{message('Couldn’t load the bus network. Check your connection and reload.');$('search-button').disabled=true;}
