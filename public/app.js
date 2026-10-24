@@ -72,18 +72,19 @@ document.querySelectorAll('.pin').forEach(b=>b.onclick=()=>{
 });
 $('cancel-pin').onclick=()=>{pinField=null;$('pin-banner').hidden=true;message('');};
 map.on('click',e=>{if(!pinField)return;const c=e.latlng;setPlace(pinField,{name:`Map pin (${c.lat.toFixed(4)}, ${c.lng.toFixed(4)})`,coord:[c.lng,c.lat],kind:'Map pin'});pinField=null;$('pin-banner').hidden=true;message('Pin set. Find journeys when both places are ready.');});
-$('locate').onclick=()=>{
+function locateUser(updateOrigin=true){
   if(!navigator.geolocation){message('Location is unavailable. Search a stop or choose a map pin.');return;}
-  userLocation.enableCompass();
+  if(updateOrigin||typeof globalThis.DeviceOrientationEvent?.requestPermission!=='function')userLocation.enableCompass();
   if(locationWatch!==null)navigator.geolocation.clearWatch(locationWatch);
-  let first=true;message('Finding your location…');
+  let first=true;if(updateOrigin)message('Finding your location…');
   locationWatch=navigator.geolocation.watchPosition(p=>{
     const coord=[p.coords.longitude,p.coords.latitude];
-    if(coord[0]<73.47||coord[0]>73.57||coord[1]<4.145||coord[1]>4.265){message('Your location is outside Greater Malé. Choose a local place or map pin.');userLocation.clear();navigator.geolocation.clearWatch(locationWatch);locationWatch=null;return;}
+    if(coord[0]<73.47||coord[0]>73.57||coord[1]<4.145||coord[1]>4.265){if(updateOrigin)message('Your location is outside Greater Malé. Choose a local place or map pin.');userLocation.clear();navigator.geolocation.clearWatch(locationWatch);locationWatch=null;return;}
     lastLocationAt=p.timestamp;userLocation.update(p.coords,p.timestamp);
-    if(first){first=false;setPlace('origin',{name:'Current location',coord});map.setView([coord[1],coord[0]],17);if(innerWidth<761)$('map').scrollIntoView({block:'center',behavior:'auto'});message(p.coords.accuracy>60?'Location is approximate. Use the shaded circle to check accuracy.':'');}
-  },error=>{userLocation.clear();message(error.code===1?'Enable location access to see yourself on the map.':'Waiting for GPS. You can still search a stop.');if(error.code===1){navigator.geolocation.clearWatch(locationWatch);locationWatch=null;userLocation.disableCompass();}},{enableHighAccuracy:true,timeout:15000,maximumAge:3000});
+    if(first&&updateOrigin){first=false;setPlace('origin',{name:'Current location',coord});map.setView([coord[1],coord[0]],17);if(innerWidth<761)$('map').scrollIntoView({block:'center',behavior:'auto'});message(p.coords.accuracy>60?'Location is approximate. Use the shaded circle to check accuracy.':'');}
+  },error=>{userLocation.clear();if(updateOrigin)message(error.code===1?'Enable location access to see yourself on the map.':'Waiting for GPS. You can still search a stop.');if(error.code===1){navigator.geolocation.clearWatch(locationWatch);locationWatch=null;userLocation.disableCompass();}},{enableHighAccuracy:true,timeout:15000,maximumAge:3000});
 };
+$('locate').onclick=()=>locateUser(true);
 $('map-locate').onclick=()=>{const f=userLocation.fix;if(f&&Date.now()-f.timestamp<30000){userLocation.enableCompass();map.setView([f.latitude,f.longitude],17);}else $('locate').click();};
 window.addEventListener('pagehide',()=>{if(locationWatch!==null)navigator.geolocation.clearWatch(locationWatch);userLocation.disableCompass();});
 setInterval(()=>{if(lastLocationAt&&Date.now()-lastLocationAt>30000)userLocation.clear();},5000);
@@ -193,6 +194,7 @@ try {
     const link=document.createElement('a');link.href='/journey.html';link.className='resume-journey';link.textContent='Resume your journey →';document.querySelector('.planner').prepend(link);
   }
   data=await request('/api/bootstrap');
+  navigator.permissions?.query({name:'geolocation'}).then(permission=>{if(permission.state==='granted'&&locationWatch===null)locateUser(false);}).catch(()=>{});
   // Local street context remains visible when online map tiles are unavailable.
   L.polyline(data.streets.map(edge=>edge.map(p=>[p[1],p[0]])),{color:'#adc1b8',weight:1,opacity:.35,interactive:false}).addTo(streetLayer);
   const query=new URL(location.href).searchParams;let shared=0;
