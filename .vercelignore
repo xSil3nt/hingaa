@@ -1,0 +1,9 @@
+.env*
+.runtime
+.git
+node_modules
+test
+scripts
+data/*.xml
+*.png
+verification.json

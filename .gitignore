@@ -1,0 +1,10 @@
+.runtime/
+node_modules/
+.vercel/
+*-keys.png
+google-key-restrictions.png
+preview*.png
+
+.env
+.env.*
+!.env.example

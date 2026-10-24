@@ -1,0 +1,326 @@
+{
+  "checkedAtUtc": "2026-10-24T05:47:58.885Z",
+  "app": "http://localhost:4173",
+  "checks": [
+    {
+      "from": "Maafannu Bus Terminal",
+      "to": "Centro Mall",
+      "computedAt": "2026-10-24T05:48:01.164Z",
+      "options": [
+        {
+          "id": "133:1-8/132:4-5",
+          "transfers": 1,
+          "walkMetres": 0,
+          "timing": "estimated",
+          "boardingSources": [
+            "published",
+            "published"
+          ]
+        },
+        {
+          "id": "133:1-9",
+          "transfers": 0,
+          "walkMetres": 284,
+          "timing": "estimated",
+          "boardingSources": [
+            "published"
+          ]
+        },
+        {
+          "id": "133:2-8/132:4-5",
+          "transfers": 1,
+          "walkMetres": 621,
+          "timing": "estimated",
+          "boardingSources": [
+            "published",
+            "published"
+          ]
+        },
+        {
+          "id": "133:2-9",
+          "transfers": 0,
+          "walkMetres": 905,
+          "timing": "estimated",
+          "boardingSources": [
+            "published"
+          ]
+        },
+        {
+          "id": "133:1-8",
+          "transfers": 0,
+          "walkMetres": 542,
+          "timing": "estimated",
+          "boardingSources": [
+            "published"
+          ]
+        }
+      ],
+      "noRouteReason": null
+    },
+    {
+      "from": "Maafannu Bus Terminal",
+      "to": "VIA Domestic Terminal",
+      "computedAt": "2026-10-24T05:48:01.266Z",
+      "options": [
+        {
+          "id": "133:1-4/124:2-3",
+          "transfers": 1,
+          "walkMetres": 0,
+          "timing": "estimated",
+          "boardingSources": [
+            "published",
+            "published"
+          ]
+        },
+        {
+          "id": "123:1-4",
+          "transfers": 0,
+          "walkMetres": 0,
+          "timing": "estimated",
+          "boardingSources": [
+            "published"
+          ]
+        },
+        {
+          "id": "133:2-4/124:2-3",
+          "transfers": 1,
+          "walkMetres": 621,
+          "timing": "estimated",
+          "boardingSources": [
+            "published",
+            "published"
+          ]
+        },
+        {
+          "id": "133:1-4/124:2-5",
+          "transfers": 1,
+          "walkMetres": 59,
+          "timing": "estimated",
+          "boardingSources": [
+            "published",
+            "published"
+          ]
+        },
+        {
+          "id": "133:2-4/124:2-5",
+          "transfers": 1,
+          "walkMetres": 680,
+          "timing": "estimated",
+          "boardingSources": [
+            "published",
+            "published"
+          ]
+        }
+      ],
+      "noRouteReason": null
+    },
+    {
+      "from": "VIA Domestic Terminal",
+      "to": "Maafannu Bus Terminal",
+      "computedAt": "2026-10-24T05:48:01.354Z",
+      "options": [
+        {
+          "id": "123:5-9",
+          "transfers": 0,
+          "walkMetres": 213,
+          "timing": "estimated",
+          "boardingSources": [
+            "published"
+          ]
+        },
+        {
+          "id": "124:3-6/133:15-18",
+          "transfers": 1,
+          "walkMetres": 0,
+          "timing": "estimated",
+          "boardingSources": [
+            "published",
+            "published"
+          ]
+        },
+        {
+          "id": "123:6-9",
+          "transfers": 0,
+          "walkMetres": 59,
+          "timing": "estimated",
+          "boardingSources": [
+            "published"
+          ]
+        },
+        {
+          "id": "123:5-8",
+          "transfers": 0,
+          "walkMetres": 737,
+          "timing": "estimated",
+          "boardingSources": [
+            "published"
+          ]
+        },
+        {
+          "id": "123:6-8",
+          "transfers": 0,
+          "walkMetres": 583,
+          "timing": "estimated",
+          "boardingSources": [
+            "published"
+          ]
+        }
+      ],
+      "noRouteReason": null
+    },
+    {
+      "from": "Jumhooree Maidhaan",
+      "to": "Centro Mall",
+      "computedAt": "2026-10-24T05:48:03.49Z",
+      "options": [
+        {
+          "id": "122:4-7/132:1-5",
+          "transfers": 1,
+          "walkMetres": 0,
+          "timing": "estimated",
+          "boardingSources": [
+            "live",
+            "published"
+          ]
+        },
+        {
+          "id": "122:4-8/132:1-5",
+          "transfers": 1,
+          "walkMetres": 224,
+          "timing": "estimated",
+          "boardingSources": [
+            "live",
+            "published"
+          ]
+        },
+        {
+          "id": "122:4-9/132:2-5",
+          "transfers": 1,
+          "walkMetres": 287,
+          "timing": "estimated",
+          "boardingSources": [
+            "live",
+            "published"
+          ]
+        },
+        {
+          "id": "130:2-9/132:2-5",
+          "transfers": 1,
+          "walkMetres": 681,
+          "timing": "estimated",
+          "boardingSources": [
+            "live",
+            "published"
+          ]
+        },
+        {
+          "id": "130:3-9/132:2-5",
+          "transfers": 1,
+          "walkMetres": 266,
+          "timing": "estimated",
+          "boardingSources": [
+            "live",
+            "published"
+          ]
+        }
+      ],
+      "noRouteReason": null
+    },
+    {
+      "from": "Maafannu Bus Terminal",
+      "to": "Villimale Ferry Terminal",
+      "computedAt": "2026-10-24T05:48:03.577Z",
+      "options": [],
+      "noRouteReason": "No connected journey found within an 850 m walk at either end and one transfer. Try a nearby stop. Ferry journeys are not included."
+    }
+  ],
+  "live": {
+    "route": "R1",
+    "code": "133",
+    "positionsOk": true,
+    "positionsChecked": "2026-10-24T05:47:36.704Z",
+    "positionCount": 4,
+    "etaOk": true,
+    "etaChecked": "2026-10-24T05:47:36.703Z",
+    "etaCount": 17,
+    "inboundCount": 17,
+    "outboundCount": null,
+    "joinedVehicleCodes": [
+      "C1223",
+      "C1192",
+      "C1219"
+    ],
+    "note": "Current response observations only. Vehicle fix age and operational reliability unknown. Journey durations remain modelled."
+  },
+  "browser": {
+    "checkedAtUtc": "2026-10-24T05:53:30.0944889Z",
+    "desktop": "Verified at 1280x800: search, selected direct itinerary, road geometry, walking and vehicle dots",
+    "mobile": "390x844 viewport override; observed 375px content width with no horizontal overflow",
+    "completed": [
+      "destination autocomplete and keyboard selection",
+      "airport alias and journey calculation",
+      "direct and transfer itinerary selection",
+      "fare and walking instruction rendering",
+      "live positions and stop arrivals",
+      "Villimale no-route state",
+      "map pin selection and sea-pin refusal"
+    ],
+    "deterministicBrowserFixtures": [
+      "location denial callback showed usable search/map fallback",
+      "rejected fetch showed server-unavailable recovery"
+    ],
+    "fixtureCleanup": "Reloaded the page after fixtures; real fetch and geolocation implementation restored",
+    "unverified": [
+      "actual geolocation permission grant and physical GPS accuracy",
+      "real bus trip, accessibility and entrances"
+    ]
+  },
+  "automatedChecks": {
+    "node": "v24.22.0",
+    "passed": 22,
+    "failed": 0,
+    "command": "npm test"
+  },
+  "googleIntegration": {
+    "checkedAtUtc": "2026-10-24T06:39:30.0073656Z",
+    "credentialsCreated": [
+      "Journey local server",
+      "Journey local browser"
+    ],
+    "serverApis": [
+      "Places API (New)",
+      "Routes API"
+    ],
+    "browserApis": [
+      "Maps JavaScript API"
+    ],
+    "browserReferrers": [
+      "http://localhost:4173/*",
+      "http://127.0.0.1:4173/*"
+    ],
+    "originalGeminiKeyUnchanged": true,
+    "apiCallsVerified": [
+      "Places autocomplete with H16 query",
+      "Place Details endpoint selection",
+      "WALK duration and geometry with step instructions"
+    ],
+    "browserVerified": [
+      "Google base map loaded",
+      "Google-listed flat selected",
+      "RTL bus journey with Google walking leg",
+      "walking instructions expanded",
+      "390x844 phone layout without horizontal overflow"
+    ],
+    "screenshots": [
+      "google-cloud-keys.png",
+      "preview-google-desktop.png",
+      "preview-google-mobile.png"
+    ],
+    "containsGoogleRouteGeometry": false,
+    "remainingLimits": [
+      "Bus ride durations remain modelled",
+      "Google mode considers at most five nearby stops per endpoint",
+      "No physical journey validation"
+    ]
+  }
+}
