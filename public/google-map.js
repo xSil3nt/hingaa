@@ -1,4 +1,5 @@
 import {mapPalette,mapStyles} from './map-theme.js';
+import {mapRegion,mapZoom} from './map-region.js';
 export async function mapLibrary(key,theme){
   const palette=theme==='new'?{...mapPalette,water:'#aed1db',bus:'#176f82',transfer:'#bf8a37'}:mapPalette;
   const styles=zoom=>[...mapStyles(zoom),...(theme==='new'?[{featureType:'water',elementType:'geometry',stylers:[{color:palette.water}]}]:[])];
@@ -14,7 +15,7 @@ export async function mapLibrary(key,theme){
     const native=await new Promise((resolve,reject)=>{
       const timer=setTimeout(()=>reject(Error('Google map could not initialize')),12000);
       window.gm_authFailure=()=>{clearTimeout(timer);reject(Error('Google map access blocked'));};
-      const instance=new g.Map(document.getElementById('map'),{center:{lat:4.202,lng:73.527},zoom:13,styles:styles(13),backgroundColor:palette.water,zoomControl:false,cameraControl:false,rotateControl:false,mapTypeControl:false,streetViewControl:false,fullscreenControl:false,gestureHandling:'greedy',clickableIcons:false});
+      const instance=new g.Map(document.getElementById('map'),{center:{lat:4.202,lng:73.527},zoom:13,styles:styles(13),backgroundColor:palette.water,zoomControl:false,cameraControl:false,rotateControl:false,mapTypeControl:false,streetViewControl:false,fullscreenControl:false,keyboardShortcuts:false,gestureHandling:'greedy',clickableIcons:false,minZoom:mapZoom.min,maxZoom:mapZoom.max,restriction:{latLngBounds:mapRegion,strictBounds:false}});
       g.event.addListenerOnce(instance,'idle',()=>{clearTimeout(timer);resolve(instance);});
     });
     let streetNames=native.getZoom()>=16;

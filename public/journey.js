@@ -1,6 +1,7 @@
 import {UserLocationMarker} from './location-marker.js';
 import {enableGuidanceDevices} from './guidance-devices.js';
 import {mapLibrary} from './google-map.js';
+import {leafletRegionOptions} from './map-region.js';
 import {SESSION_KEY,LEASE_KEY,browserStore,isCurrentSession,loadSession,saveSession,confirmStep,previousStep,ProgressTracker} from './session-core.js';
 const $=id=>document.getElementById(id),escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const redesign=document.body.dataset.theme==='new',homeUrl=redesign?'/new':'/';
@@ -90,7 +91,7 @@ setInterval(refreshFeed,30000);
 if(session)session.status=session.status==='completed'?'completed':'paused';
 render();
 if(session)try{
-  const config=await(await fetch('/api/config',{signal:AbortSignal.timeout(10000)})).json();const setup=await mapLibrary(config.browserKey,redesign?'new':undefined);L=setup.library;map=L.map('map').setView([4.202,73.527],13);locationDot.attach(map,L);L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap contributors'}).addTo(map);routeLayer=L.layerGroup().addTo(map);userLayer=L.layerGroup().addTo(map);map.on('dragstart',()=>{follow=false;});drawRoute();refreshFeed();
+  const config=await(await fetch('/api/config',{signal:AbortSignal.timeout(10000)})).json();const setup=await mapLibrary(config.browserKey,redesign?'new':undefined);L=setup.library;map=L.map('map',leafletRegionOptions).setView([4.202,73.527],13);locationDot.attach(map,L);L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap contributors'}).addTo(map);routeLayer=L.layerGroup().addTo(map);userLayer=L.layerGroup().addTo(map);map.on('dragstart',()=>{follow=false;});drawRoute();refreshFeed();
 }catch{alertText('Map unavailable. Your journey instructions are still here.');}
 if(session&&session.status!=='completed')startTracking();
 if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').then(r=>{registration=r;}).catch(()=>{});

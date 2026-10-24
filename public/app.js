@@ -2,7 +2,8 @@ import {UserLocationMarker} from './location-marker.js';
 import {enableGuidanceDevices} from './guidance-devices.js';
 import {createSession,loadSession,replaceSession,browserStore} from './session-core.js';
 import {mapLibrary} from './google-map.js';
-import {newResults} from './new-design.js';
+import {leafletRegionOptions} from './map-region.js';
+import {newResults,boardingInfo} from './new-design.js';
 const redesign=document.body.dataset.theme==='new',journeyUrl=redesign?'/new/journey':'/journey.html';
 const $=id=>document.getElementById(id);
 const escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -13,7 +14,7 @@ let data,selected={origin:null,destination:null},result=null,activeId=null,pinFi
 let searchGeneration=0,feedGeneration=0,pendingPlaces=0;
 const config=await fetch('/api/config').then(r=>r.json()).catch(()=>({}));
 const mapSetup=await mapLibrary(config.browserKey,redesign?'new':undefined),L=mapSetup.library;
-const map=L.map('map',{zoomControl:false}).setView([4.202,73.527],13);
+const map=L.map('map',{zoomControl:false,...leafletRegionOptions}).setView([4.202,73.527],13);
 L.control.zoom({position:'topright'}).addTo(map);
 const tiles=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}).addTo(map);
 const streetLayer=L.layerGroup().addTo(map),journeyLayer=L.layerGroup().addTo(map),vehicleLayer=L.layerGroup().addTo(map),pointLayer=L.layerGroup().addTo(map);
@@ -150,8 +151,8 @@ function render(){
       location.href=journeyUrl;
     }catch(error){message(error.message||'Couldn’t save this journey. Enable site storage and try again.');}
   });
-  $('refresh-feed').onclick=refreshFeeds;renderFeeds();
-  document.querySelector('details.live-panel').open=liveOpen;
+  if($('refresh-feed'))$('refresh-feed').onclick=refreshFeeds;renderFeeds();
+  const livePanel=document.querySelector('details.live-panel');if(livePanel)livePanel.open=liveOpen;
   const alternatives=document.querySelector('.new-alternatives');if(alternatives)alternatives.open=alternativesOpen;
   $('share-journey').onclick=async()=>{try{await navigator.clipboard.writeText(location.href);$('share-journey').textContent='Copied';setTimeout(()=>{if($('share-journey'))$('share-journey').textContent='Share';},2000);}catch{message('Copy the address from your browser to share this journey.');}};
   document.querySelectorAll('.journey.selected details').forEach((d,i)=>{d.open=!!openDisclosures[i];});
@@ -166,12 +167,13 @@ function drawJourney(){
   }
   if(points.length){bounds=L.latLngBounds(points);map.fitBounds(bounds,{padding:[45,55],maxZoom:16});}renderFeeds();
 }
-$('fit').onclick=()=>{if(bounds)map.fitBounds(bounds,{padding:[45,55],maxZoom:16});else map.setView([4.202,73.527],13);};
+if($('fit'))$('fit').onclick=()=>{if(bounds)map.fitBounds(bounds,{padding:[45,55],maxZoom:16});else map.setView([4.202,73.527],13);};
 function renderFeeds(){
-  if(!$('feed-content'))return;vehicleLayer.clearLayers();
+  const feedContent=$('feed-content');if(!feedContent&&!redesign)return;vehicleLayer.clearLayers();
+  if(redesign)document.querySelectorAll('[data-boarding-index]').forEach(el=>{const leg=current()?.legs[+el.dataset.boardingIndex];if(leg)el.innerHTML=boardingInfo(leg,{escape,time});});
   const buses=current()?.legs.filter(l=>l.type==='bus')||[];
   const now=Date.now();
-  $('feed-content').innerHTML=buses.length?buses.map(leg=>{
+  const feedHtml=buses.length?buses.map(leg=>{
     const f=result.feeds?.[leg.routeCode];if(!f)return `<div class="feed-route"><b>${escape(leg.number)}</b><p class="feed-empty">No feed checked for this option yet. Tap Refresh.</p></div>`;
     const fresh=e=>e?.ok&&now-Date.parse(e.fetchedAtUtc)<90000;
     const liveFresh=fresh(f.live),etaFresh=fresh(f.eta);
@@ -183,6 +185,7 @@ function renderFeeds(){
     const rows=etaFresh?['inboundStopsETAList','outboundStopsETAList'].flatMap(k=>f.eta.data?.[k]||[]).filter(r=>String(r.stopCode)===leg.fromCode):[];
     return `<div class="feed-route"><b>${escape(leg.number)} · ${escape(leg.from)}</b>${rows.length?rows.slice(0,5).map(r=>`<div class="feed-row"><span><span class="live-dot"></span>${escape(r.eta)}<br><small>${escape(r.vehicleCode)} · direction ${escape(r.direction)} · ${escape(r.destination||'Destination unknown')}${liveFresh&&f.live.data?.busList?.some(b=>String(b.busCode)===String(r.vehicleCode))?' · position on map':''}</small></span></div>`).join(''):`<p class="feed-empty">${etaFresh?(leg.departure.source==='unknown'?'Waiting time is not included in the travel estimate.':'Using the departure time shown above.'):f.eta?.ok?'Arrival check is out of date. Refresh to check again.':'Arrival feed unavailable.'}</p>`}<p class="small">${etaFresh?'Arrivals checked '+time(f.eta.fetchedAtUtc)+'. ':''}${liveFresh?(f.live.data?.busList||[]).length+' vehicle positions checked '+time(f.live.fetchedAtUtc)+'.':f.live?.ok?'Vehicle check expired.':'Vehicle feed unavailable.'}</p>${!etaFresh?'<p class="small">Published / saved timing may still appear above, with its own label.</p>':''}</div>`;
   }).join(''):'<p class="small">No bus needed for this walking option.</p>';
+  if(feedContent)feedContent.innerHTML=feedHtml;
 }
 async function refreshFeeds(){
   const journey=current();if(!journey||loading)return;const generation=++feedGeneration;

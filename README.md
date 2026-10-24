@@ -113,7 +113,7 @@ A short-lived tab lease prevents duplicate GPS alerts. Route, phase, progress an
 
 ### Transit-focused map update
 
-The base map now uses charcoal water, cream islands and mint parks, with locality labels at overview scale and street names only at zoom 16 and above. Highway colors, business icons, transit labels and native camera controls are suppressed through Google Maps style/options. Custom accessible zoom buttons replace the camera widget. Google's logo, copyright, terms and keyboard controls remain visible. The planner initially fits the two selected endpoints instead of opening on a broad ocean extent. Styling is shared with active journey guidance.
+The base map now uses charcoal water, cream islands and mint parks, with locality labels at overview scale and street names only at zoom 16 and above. Highway colors, business icons, transit labels and native camera controls are suppressed through Google Maps style/options. Custom accessible zoom buttons replace the camera widget. Google's logo, copyright and Terms link remain visible; the optional keyboard-shortcut control is disabled. The planner initially fits the two selected endpoints instead of opening on a broad ocean extent. Styling is shared with active journey guidance.
 
 ### Selected palette
 
@@ -128,3 +128,5 @@ The planner's location button now keeps a live blue marker and accuracy circle o
 ## Separate design preview
 
 `/new` is a working alternative planner with a map-first mobile layout, black/charcoal panels, cyan controls and destination names, warm gold step dividers, and a condensed hingaa wordmark. Desktop uses a side panel. `/new/journey` carries the same design into automatic guidance. Place search, map pins, route preferences, alternatives, sharing, live feeds and manual fallback step controls use the existing planner/session logic. The original `/` and `/journey.html` remain available. Theme assets are `public/new.css`, `new-shell.js` and `new-design.js`; the server maps the clean endpoints to separate HTML documents. No account/profile feature or new external asset dependency was added.
+
+Map panning is limited to a padded Malé–airport–Hulhumalé rectangle, with zoom levels 12–20 in Google Maps and the Leaflet fallback. The `/new` planner has no area caption or fit-map button. Fresh selected boarding estimates and vehicle codes appear inside bus steps and expire after 90 seconds; published/saved times are never labelled live. Vehicle markers remain on the map. The separate live-updates panel has been removed from the new design.
