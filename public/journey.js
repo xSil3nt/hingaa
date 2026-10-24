@@ -23,7 +23,7 @@ function render(){
   $('feed-status').hidden=false;document.querySelector('.session-panel>details').hidden=false;
   $('session-status').textContent='Step '+(session.index+1)+' of '+session.legs.length;
   const next=riding?leg.stopPoints[Math.min(session.stopIndex+1,leg.stopPoints.length-1)]:null;
-  $('instruction').innerHTML=leg.type==='walk'?'<span class="session-kicker">Walk to</span><h1>'+escape(leg.to||session.destination.name)+'</h1><p>'+(remaining===null?leg.minutes+' min · '+Math.round(leg.distance)+' m':Math.round(remaining)+' m to go')+'</p>'+(leg.instructions?.length?'<details><summary>Walking directions</summary><ol>'+leg.instructions.map(i=>'<li>'+escape(i)+'</li>').join('')+'</ol></details>':''):
+  $('instruction').innerHTML=leg.type==='walk'?'<span class="session-kicker">Walk to</span><h1>'+escape(leg.to||session.destination.name)+'</h1><p>'+(remaining===null?leg.minutes+' min · '+Math.round(leg.distance)+' m':Math.round(remaining)+' m to go')+'</p>':
     '<span class="route-badge">'+escape(leg.number)+'</span><h1>'+escape(session.phase==='boarding'?'Board at '+leg.from:session.phase==='alight'?'Get off here':'Stay on the bus')+'</h1><p>'+escape(session.phase==='boarding'?leg.direction:session.phase==='alight'?leg.to:'Next: '+next.name)+'</p><div class="session-target"><small>Get off at</small><strong>'+escape(leg.to)+'</strong>'+(riding?Math.max(0,leg.stopPoints.length-1-session.stopIndex)+' stops remaining':'')+'</div>'+(riding?'<progress aria-label="Bus stops completed" max="'+(leg.stopPoints.length-1)+'" value="'+session.stopIndex+'"></progress>':'');
   $('step-controls').hidden=false;$('next-step').disabled=false;
   $('previous-step').disabled=session.index===0&&(leg.type!=='bus'||session.phase==='boarding');
