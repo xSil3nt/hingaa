@@ -84,7 +84,7 @@ function locateUser(updateOrigin=true){
     const coord=[p.coords.longitude,p.coords.latitude];
     if(coord[0]<73.47||coord[0]>73.57||coord[1]<4.145||coord[1]>4.265){if(updateOrigin)message('Your location is outside Greater Malé. Choose a local place or map pin.');userLocation.clear();navigator.geolocation.clearWatch(locationWatch);locationWatch=null;return;}
     lastLocationAt=p.timestamp;userLocation.update(p.coords,p.timestamp);
-    if(first&&updateOrigin){first=false;setPlace('origin',{name:'Current location',coord});map.setView([coord[1],coord[0]],17);if(innerWidth<761)$('map').scrollIntoView({block:'center',behavior:'auto'});message(p.coords.accuracy>60?'Location is approximate. Use the shaded circle to check accuracy.':'');}
+    if(first&&updateOrigin){first=false;setPlace('origin',{name:'Current location',coord});map.setView([coord[1],coord[0]],17);if(innerWidth<761)$('map').scrollIntoView({block:'center',behavior:'auto'});message('');}
   },error=>{userLocation.clear();if(updateOrigin)message(error.code===1?'Enable location access to see yourself on the map.':'Waiting for GPS. You can still search a stop.');if(error.code===1){navigator.geolocation.clearWatch(locationWatch);locationWatch=null;userLocation.disableCompass();}},{enableHighAccuracy:true,timeout:15000,maximumAge:3000});
 };
 $('locate').onclick=()=>locateUser(true);
