@@ -1,5 +1,5 @@
-// An atlas-like base: charcoal sea, cream islands, mint parks, sparse labels.
-export const mapPalette={water:'#2d303b',land:'#eee3dc',park:'#b8e7d6',road:'#fffaf5',roadEdge:'#e0d2cb',text:'#55556b',bus:'#6475ca',transfer:'#177d70',walk:'#73778b',vehicle:'#f5c95e'};
+// An atlas-like base: pale periwinkle sea, cream islands, mint parks, sparse labels.
+export const mapPalette={water:'#dce4f4',land:'#eee3dc',park:'#b8e7d6',road:'#fffaf5',roadEdge:'#e0d2cb',text:'#55556b',bus:'#6475ca',transfer:'#177d70',walk:'#73778b',vehicle:'#f5c95e'};
 export function mapStyles(zoom=13){return [
   {elementType:'geometry',stylers:[{color:mapPalette.land}]},
   {elementType:'labels',stylers:[{visibility:'off'}]},
