@@ -192,7 +192,7 @@ try {
     try{const p=JSON.parse(query.get(field));if(p&&typeof p.name==='string'&&p.name.length<200&&Array.isArray(p.coord)&&p.coord.length===2&&p.coord.every(Number.isFinite)&&p.coord[0]>73.47&&p.coord[0]<73.57&&p.coord[1]>4.145&&p.coord[1]<4.265){place=p;shared++;}}catch{}
     setPlace(field,place);
   }
+  map.fitBounds(L.latLngBounds(Object.values(selected).map(p=>[p.coord[1],p.coord[0]])),{maxZoom:14});
   if(shared===2)$('search-form').requestSubmit();
   if(mapSetup.error)message(mapSetup.error);
-  document.querySelector('.map-caption').textContent=mapSetup.provider==='google'?'Google Maps · RTL buses':'Greater Malé · RTL bus network';
 }catch{message('Couldn’t load the bus network. Check your connection and reload.');$('search-button').disabled=true;}

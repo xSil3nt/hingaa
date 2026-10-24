@@ -1,4 +1,4 @@
-import {mapStyle,mapPalette} from './map-theme.js';
+import {mapStyle,mapPalette,mapStyles} from './map-theme.js';
 export async function mapLibrary(key){
   if(!key)return {library:window.L,provider:'osm'};
   try{
@@ -12,9 +12,14 @@ export async function mapLibrary(key){
     const native=await new Promise((resolve,reject)=>{
       const timer=setTimeout(()=>reject(Error('Google map could not initialize')),12000);
       window.gm_authFailure=()=>{clearTimeout(timer);reject(Error('Google map access blocked'));};
-      const instance=new g.Map(document.getElementById('map'),{center:{lat:4.202,lng:73.527},zoom:13,styles:mapStyle,backgroundColor:mapPalette.water,mapTypeControl:false,streetViewControl:false,fullscreenControl:false,gestureHandling:'cooperative',clickableIcons:false});
+      const instance=new g.Map(document.getElementById('map'),{center:{lat:4.202,lng:73.527},zoom:13,zoomControl:false,cameraControl:false,rotateControl:false,styles:mapStyle,backgroundColor:mapPalette.water,mapTypeControl:false,streetViewControl:false,fullscreenControl:false,gestureHandling:'cooperative',clickableIcons:false});
       g.event.addListenerOnce(instance,'idle',()=>{clearTimeout(timer);resolve(instance);});
     });
+    let detail=native.getZoom()>=16;
+    native.addListener('zoom_changed',()=>{const next=native.getZoom()>=16;if(next!==detail){detail=next;native.setOptions({styles:mapStyles(native.getZoom())});}});
+    const controls=document.createElement('div');controls.className='map-zoom';controls.setAttribute('role','group');controls.setAttribute('aria-label','Map zoom');
+    for(const [label,text,delta] of [['Zoom in','+',1],['Zoom out','−',-1]]){const button=document.createElement('button');button.type='button';button.textContent=text;button.setAttribute('aria-label',label);button.onclick=()=>native.setZoom(native.getZoom()+delta);controls.append(button);}
+    document.getElementById('map').parentElement.append(controls);
     class Group {
       items=[];native=null;
       addTo(map){this.native=map.native;return this;}
