@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createSession,validSession,loadSession,saveSession,confirmStep,ProgressTracker,SESSION_KEY,LEASE_KEY,replaceSession,isCurrentSession,TTL} from '../public/session-core.js';
+import {createSession,validSession,loadSession,saveSession,confirmStep,previousStep,ProgressTracker,SESSION_KEY,LEASE_KEY,replaceSession,isCurrentSession,TTL} from '../public/session-core.js';
 const a=[73.51,4.17],b=[73.512,4.17],c=[73.514,4.17],now=Date.now();
 const bus={type:'bus',number:'R1',from:'Start',to:'Finish',coords:[a,b,c],stopPoints:[{name:'Start',coord:a},{name:'Middle',coord:b},{name:'Finish',coord:c}],distance:444,minutes:5};
 const walk={type:'walk',to:'Start',coords:[[73.509,4.17],a],distance:111,minutes:2};
@@ -22,7 +22,7 @@ test('session restore preserves phase, progress and deduplicated alerts; expired
   storage.setItem(SESSION_KEY,'broken');assert.equal(loadSession(storage,now),null);
   storage.setItem(SESSION_KEY,JSON.stringify({...s,index:999}));assert.equal(loadSession(storage,now),null);
 });
-test('GPS cannot infer boarding, and paused or inaccurate or stale fixes cannot advance steps',()=>{
+test('waiting at a stop does not infer boarding, and paused or inaccurate or stale fixes cannot advance steps',()=>{
   const s=make([bus]),t=new ProgressTracker();
   assert.equal(send(t,s,a,0).events.length,0);s.status='active';
   send(t,s,a,0);send(t,s,a,2000);assert.equal(s.phase,'boarding');assert.equal(s.index,0);
@@ -30,16 +30,40 @@ test('GPS cannot infer boarding, and paused or inaccurate or stale fixes cannot 
   assert.equal(send(tracker,w,a,0,150).quality,'weak');assert.equal(w.index,0);
   assert.equal(tracker.update(w,fix(a,0),now+30000).quality,'weak');assert.equal(w.index,0);
 });
-test('bus progress emits middle-stop and prepare alerts once, then requires explicit alighting',()=>{
+test('bus progress emits middle-stop and prepare alerts once, then automatically completes at the destination',()=>{
   const s=make([bus]);s.status='active';confirmStep(s);const t=new ProgressTracker();
   send(t,s,a,0);send(t,s,b,12000);const middle=send(t,s,b,14000);
   assert.equal(s.stopIndex,1);assert.ok(middle.events.some(e=>e.title==='Middle'));
   assert.ok(s.alerts.includes('0:prepare'));
   assert.equal(send(t,s,b,16000).events.length,0);
   send(t,s,c,28000);const end=send(t,s,c,30000);
-  assert.equal(s.phase,'alight');assert.equal(s.status,'active');assert.ok(end.events.some(e=>e.title==='Get off here'));
+  assert.equal(s.phase,'done');assert.equal(s.status,'completed');assert.ok(end.events.some(e=>e.title==='Get off here'));
   const restored=new ProgressTracker();assert.equal(send(restored,s,c,32000).events.length,0);
   confirmStep(s);assert.equal(s.status,'completed');
+});
+
+test('route-aligned bus movement advances boarding and arrival advances into the following walk',()=>{
+  const s=make([bus,{...walk,coords:[c,[73.515,4.17]],to:'Destination'}]);s.status='active';const t=new ProgressTracker();
+  send(t,s,a,0);send(t,s,[73.511,4.17],10000);assert.equal(s.phase,'boarding');
+  send(t,s,[73.5114,4.17],12000);assert.equal(s.phase,'riding');
+  send(t,s,b,20000);send(t,s,b,22000);assert.equal(s.stopIndex,1);
+  send(t,s,c,34000);send(t,s,c,36000);assert.equal(s.index,1);assert.equal(s.phase,'walking');
+  send(t,s,[73.515,4.17],96000);send(t,s,[73.515,4.17],98000);assert.equal(s.status,'completed');
+});
+
+test('walking away from the boarding stop does not infer a bus ride',()=>{
+  const s=make([bus]);s.status='active';const t=new ProgressTracker();
+  send(t,s,a,0);send(t,s,[73.511,4.17],60000);send(t,s,[73.5114,4.17],80000);
+  assert.equal(s.phase,'boarding');assert.equal(s.progress,0);
+});
+
+test('previous and next can correct boarding, move between legs and reopen a completed journey',()=>{
+  const s=make([walk,bus]);s.status='active';previousStep(s);assert.equal(s.index,0);
+  confirmStep(s);confirmStep(s);assert.equal(s.phase,'riding');
+  previousStep(s);assert.equal(s.phase,'boarding');assert.equal(s.index,1);
+  previousStep(s);assert.equal(s.phase,'walking');assert.equal(s.index,0);
+  confirmStep(s);confirmStep(s);confirmStep(s);assert.equal(s.status,'completed');
+  previousStep(s);assert.equal(s.status,'active');assert.equal(s.index,1);assert.equal(s.phase,'riding');assert.ok(validSession(s,now));
 });
 test('walking arrival needs two distinct accurate fixes and alerts are not replayed',()=>{
   const s=make([walk,bus]);s.status='active';const t=new ProgressTracker();

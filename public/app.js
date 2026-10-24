@@ -1,4 +1,5 @@
 import {UserLocationMarker} from './location-marker.js';
+import {enableGuidanceDevices} from './guidance-devices.js';
 import {createSession,loadSession,replaceSession,browserStore} from './session-core.js';
 import {mapLibrary} from './google-map.js';
 const $=id=>document.getElementById(id);
@@ -137,6 +138,8 @@ function render(){
       const old=loadSession(browserStore);
       const chosen=result.journeys.find(j=>j.id===button.dataset.start);
       replaceSession(browserStore,createSession(chosen,result.origin,result.destination));
+      button.disabled=true;
+      await enableGuidanceDevices();
       try{const registration=await navigator.serviceWorker?.getRegistration();const notifications=await registration?.getNotifications();notifications?.filter(n=>n.data?.session===old?.id).forEach(n=>n.close());}catch{}
       location.href='/journey.html';
     }catch(error){message(error.message||'Couldn’t save this journey. Enable site storage and try again.');}

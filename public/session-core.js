@@ -32,6 +32,15 @@ export function confirmStep(s){
   if(l.type==='bus'&&s.phase==='boarding'){s.phase='riding';s.stopIndex=0;s.progress=0;}
   else advance(s);
 }
+export function previousStep(s){
+  if(s.status==='completed')s.index=s.legs.length-1;
+  else if(s.legs[s.index].type==='bus'&&s.phase!=='boarding'){
+    s.phase='boarding';s.stopIndex=0;s.progress=0;s.alerts=s.alerts.filter(k=>!k.startsWith(s.index+':'));return;
+  }else if(s.index>0)s.index--;
+  else return;
+  s.status='active';s.phase=s.legs[s.index].type==='bus'?'riding':'walking';s.stopIndex=0;s.progress=0;
+  s.alerts=s.alerts.filter(k=>Number(k.split(':')[0])<s.index);
+}
 // Project onto the ordered route, restricting jumps and backward loop matches.
 export function project(coords,p,min=0,max=Infinity){
   let along=0,best=null;const scale=Math.cos(p[1]*Math.PI/180);
@@ -45,13 +54,13 @@ export function project(coords,p,min=0,max=Infinity){
   return best?{...best,total:along}:null;
 }
 export class ProgressTracker{
-  constructor(){this.last=null;this.hit=null;}
+  constructor(){this.last=null;this.hit=null;this.boarding=null;}
   update(s,fix,now=Date.now()){
     const events=[];
     if(s.status!=='active'||!coord(fix.coord)||!Number.isFinite(fix.accuracy)||fix.accuracy<0||fix.accuracy>60||!Number.isFinite(fix.timestamp)||now-fix.timestamp>20000||fix.timestamp>now+5000)return {events,quality:'weak'};
     if(this.last&&fix.timestamp<=this.last.timestamp)return {events,quality:'stale'};
     if(this.last&&distance(this.last.coord,fix.coord)/((fix.timestamp-this.last.timestamp)/1000)>45)return {events,quality:'jump'};
-    const elapsed=this.last?Math.min(60,(fix.timestamp-this.last.timestamp)/1000):0;this.last=fix;
+    const previous=this.last,elapsed=previous?Math.min(60,(fix.timestamp-previous.timestamp)/1000):0;this.last=fix;
     const leg=s.legs[s.index];if(!leg)return {events,quality:'good'};
     const emit=(key,title,body)=>{key=s.index+':'+key;if(!s.alerts.includes(key)){s.alerts.push(key);events.push({key,title,body});}};
     const close=(key,d,limit)=>{
@@ -66,7 +75,19 @@ export class ProgressTracker{
       return {events,quality:p&&p.away>100?'off-route':'good',remaining:p&&p.away<100?Math.max(0,p.total-p.along):d};
     }
     if(s.phase==='boarding'){
-      if(close('board',distance(fix.coord,leg.coords[0]),50))emit('board','At your bus stop','Take '+leg.number+' from '+leg.from+'. Tap “I’m on the bus” once aboard.');
+      const atStop=distance(fix.coord,leg.coords[0]);
+      if(atStop<=50&&this.boarding?.index!==s.index)this.boarding={index:s.index,at:fix.timestamp};
+      const p=project(leg.coords,fix.coord,0,900);
+      const speed=previous&&elapsed>0?distance(previous.coord,fix.coord)/elapsed:0;
+      const moving=this.boarding?.index===s.index&&fix.timestamp-this.boarding.at>=5000&&atStop>70&&p&&p.along>80&&p.away<=Math.max(30,fix.accuracy)&&speed>=2.5;
+      if(moving){
+        if(close('riding',0,0)){s.phase='riding';s.progress=p.along;emit('riding','On your way',leg.number+' · Get off at '+leg.to+'.');}
+      }else if(close('board',atStop,50))emit('board','At your bus stop','Take '+leg.number+' from '+leg.from+'.');
+      return {events,quality:'good'};
+    }
+    // Resume old sessions that were waiting for a manual alighting confirmation.
+    if(s.phase==='alight'){
+      if(close('alight',distance(fix.coord,leg.coords.at(-1)),60)){emit('alight','Get off here',leg.to);advance(s);}
       return {events,quality:'good'};
     }
     const p=project(leg.coords,fix.coord,Math.max(0,s.progress-80),s.progress+Math.max(450,elapsed*35+100));
@@ -81,7 +102,7 @@ export class ProgressTracker{
     }
     if(candidate&&close('stop:'+candidate.i,candidate.d,60)){
       s.stopIndex=candidate.i;
-      if(candidate.i===last){s.phase='alight';emit('alight','Get off here',leg.to+'. Confirm once you’re off the bus.');}
+      if(candidate.i===last){emit('alight','Get off here',leg.to);advance(s);return {events,quality:'good'};}
       else emit('stop:'+candidate.i,stops[candidate.i].name,(last-candidate.i)+' '+(last-candidate.i===1?'stop':'stops')+' to '+leg.to);
     }else if(!candidate)this.hit=null;
     if(s.phase!=='alight'&&(last-s.stopIndex<=1||p.total-s.progress<=400))emit('prepare','Your stop is coming up','Get ready to get off at '+leg.to+'.');

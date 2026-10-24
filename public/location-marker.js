@@ -17,9 +17,9 @@ export class UserLocationMarker{
     if(heading!==null){this.headingAt=Date.now();if(this.heading!==null&&Math.abs(((heading-this.heading+540)%360)-180)<3)return;if(Date.now()-this.lastDraw>=80){this.heading=heading;this.lastDraw=Date.now();this.draw();}} 
   };}
   attach(map,L){this.map=map;this.L=L;this.draw();return this;}
-  async enableCompass(){
+  async enableCompass(requestPermission=true){
     try{
-      if(typeof globalThis.DeviceOrientationEvent?.requestPermission==='function'&&await DeviceOrientationEvent.requestPermission(true)!=='granted')return false;
+      if(requestPermission&&typeof globalThis.DeviceOrientationEvent?.requestPermission==='function'&&await DeviceOrientationEvent.requestPermission(true)!=='granted')return false;
       if(!this.listening){window.addEventListener('deviceorientation',this.onOrientation);window.addEventListener('deviceorientationabsolute',this.onOrientation);this.listening=true;}
       return true;
     }catch{return false;}
