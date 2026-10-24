@@ -12,7 +12,7 @@ export async function mapLibrary(key){
     const native=await new Promise((resolve,reject)=>{
       const timer=setTimeout(()=>reject(Error('Google map could not initialize')),12000);
       window.gm_authFailure=()=>{clearTimeout(timer);reject(Error('Google map access blocked'));};
-      const instance=new g.Map(document.getElementById('map'),{center:{lat:4.202,lng:73.527},zoom:13,styles:mapStyles(13),backgroundColor:mapPalette.water,zoomControl:false,cameraControl:false,rotateControl:false,mapTypeControl:false,streetViewControl:false,fullscreenControl:false,gestureHandling:'cooperative',clickableIcons:false});
+      const instance=new g.Map(document.getElementById('map'),{center:{lat:4.202,lng:73.527},zoom:13,styles:mapStyles(13),backgroundColor:mapPalette.water,zoomControl:false,cameraControl:false,rotateControl:false,mapTypeControl:false,streetViewControl:false,fullscreenControl:false,gestureHandling:'greedy',clickableIcons:false});
       g.event.addListenerOnce(instance,'idle',()=>{clearTimeout(timer);resolve(instance);});
     });
     let streetNames=native.getZoom()>=16;
